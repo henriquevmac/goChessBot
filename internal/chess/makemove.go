@@ -63,6 +63,9 @@ func (b *Board) MakeMove(m Move) Undo {
 
 	b.ToMove = color.OppositeColor()
 
+	if b.Square[m.From()].Type() == King {
+		b.KingPos[colorConversion(color)] = m.To()
+	}
 	b.Square[m.From()] = Empty
 	b.Square[m.To()] = piece
 	return undoRecord
@@ -100,6 +103,10 @@ func (b *Board) UnmakeMove(m Move, u Undo) {
 		capturedPiece = Empty
 		targetSquare := m.To() - pawnInfo[colorConversion(b.ToMove)].forward
 		b.Square[targetSquare] = u.captured
+	}
+
+	if b.Square[m.To()].Type() == King {
+		b.KingPos[colorConversion(b.ToMove)] = m.From()
 	}
 
 	b.Square[m.From()] = piece

@@ -111,13 +111,13 @@ func TestJumpTargetExamples(t *testing.T) {
 		sq    int
 		want  []int
 	}{
-		{"knightTargets", &knightTargets, 0, []int{10, 17}},                         // a1 → c2, b3
-		{"knightTargets", &knightTargets, 1, []int{11, 16, 18}},                     // b1 → d2, a3, c3
-		{"knightTargets", &knightTargets, 7, []int{13, 22}},                         // h1 → f2, g3
+		{"knightTargets", &knightTargets, 0, []int{10, 17}},                          // a1 → c2, b3
+		{"knightTargets", &knightTargets, 1, []int{11, 16, 18}},                      // b1 → d2, a3, c3
+		{"knightTargets", &knightTargets, 7, []int{13, 22}},                          // h1 → f2, g3
 		{"knightTargets", &knightTargets, 28, []int{11, 13, 18, 22, 34, 38, 43, 45}}, // e4: all 8
-		{"kingTargets", &kingTargets, 0, []int{1, 8, 9}},                            // a1: corner, 3
-		{"kingTargets", &kingTargets, 4, []int{3, 5, 11, 12, 13}},                   // e1: edge, 5
-		{"kingTargets", &kingTargets, 28, []int{19, 20, 21, 27, 29, 35, 36, 37}},    // e4: all 8
+		{"kingTargets", &kingTargets, 0, []int{1, 8, 9}},                             // a1: corner, 3
+		{"kingTargets", &kingTargets, 4, []int{3, 5, 11, 12, 13}},                    // e1: edge, 5
+		{"kingTargets", &kingTargets, 28, []int{19, 20, 21, 27, 29, 35, 36, 37}},     // e4: all 8
 	}
 	for _, tt := range tests {
 		if got := tt.table[tt.sq]; !sameSquares(got, tt.want) {

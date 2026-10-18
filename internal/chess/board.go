@@ -24,6 +24,7 @@ type Board struct {
 	EnPassantSquare int
 	HalfmoveClock int
 	FullmoveNumber int
+	KingPos [2]int
 }
 
 func ConvertRowColToIdx(row int, col int) int {
@@ -37,6 +38,7 @@ func CreateBoard(fen string) (*Board, error) {
 	EnPassantSquare := -1
 	HalfmoveClock := 0
 	FullmoveNumber := 1
+	KingPos := [2]int{}
 	if fen == "" {
 		fen = startPosition
 	}
@@ -65,6 +67,9 @@ func CreateBoard(fen string) (*Board, error) {
 				}
 				pieceId := pieceTypeFromSymbol[unicode.ToLower(symbol)]
 				index := ConvertRowColToIdx(rank, file)
+				if pieceId == King {
+					KingPos[colorConversion(pieceColor)] = index
+				}
 				Square[index] = pieceId | pieceColor
 				file++
 			}
@@ -110,5 +115,5 @@ func CreateBoard(fen string) (*Board, error) {
 			FullmoveNumber = parseFull
 		}
 	}
-	return &Board{Square, ToMove, castlingRights, EnPassantSquare, HalfmoveClock, FullmoveNumber}, nil
+	return &Board{Square, ToMove, castlingRights, EnPassantSquare, HalfmoveClock, FullmoveNumber, KingPos}, nil
 }

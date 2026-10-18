@@ -29,6 +29,9 @@ func boardDiff(got, want *Board) string {
 	if got.FullmoveNumber != want.FullmoveNumber {
 		diffs = append(diffs, fmt.Sprintf("FullmoveNumber: got %d, want %d", got.FullmoveNumber, want.FullmoveNumber))
 	}
+	if got.KingPos != want.KingPos {
+		diffs = append(diffs, fmt.Sprintf("KingPos [white, black]: got %v, want %v", got.KingPos, want.KingPos))
+	}
 	if len(diffs) == 0 && *got != *want {
 		diffs = append(diffs, "boards differ in a field boardDiff does not know about")
 	}
