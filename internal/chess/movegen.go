@@ -29,6 +29,10 @@ var castlingInfo = [2][2]castlingRule{
 		{right: BlackQueen, kingFrom: 60, kingTo: 58, rookFrom: 56, rookTo: 59, empty: []int{57, 58, 59}, safe: [3]int{58, 59, 60}, flag: QueenCastle}},
 }
 
+const allCastlingRights = WhiteKing | WhiteQueen | BlackKing | BlackQueen
+
+var castlingKeep [64]CastlingRights
+
 func (b *Board) generateKnightOrKingMoves(moves []Move, sq int, targets []int) []Move {
 	for _, target := range targets {
 		if b.Square[target].IsEmpty() {
@@ -160,4 +164,16 @@ func (b *Board) GenerateMoves(moves []Move) []Move {
 	moves = b.generateCastleMoves(moves)
 
 	return moves
+}
+
+func init() {
+	for sq := range castlingKeep {
+		castlingKeep[sq] = allCastlingRights
+	}
+	for _, colorRules := range castlingInfo {
+		for _, rule := range colorRules {
+			castlingKeep[rule.kingFrom] &^= rule.right
+			castlingKeep[rule.rookFrom] &^= rule.right
+		}
+	}
 }

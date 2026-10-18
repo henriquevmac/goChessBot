@@ -51,12 +51,31 @@ func (m Move) Flag() MoveFlag {
 	return MoveFlag(m >> flagShift & flagMask)
 }
 
+func (m Move) IsCastle() bool {
+	return m.Flag() == KingCastle || m.Flag() == QueenCastle
+}
+
 func (m Move) IsCapture() bool {
 	return m.Flag() & 4 != 0
 }
 
 func (m Move) IsPromotion() bool {
 	return m.Flag() & 8 != 0
+}
+
+func (m Move) GetPromotion() PieceId {
+	switch m.Flag() & 3 {
+	case 0:
+		return Knight
+	case 1:
+		return Bishop
+	case 2:
+		return Rook
+	case 3:
+		return Queen
+	default:
+		return Empty
+	}
 }
 
 func (m Move) String() string {
