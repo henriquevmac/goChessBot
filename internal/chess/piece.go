@@ -21,3 +21,19 @@ const (
 	White PieceId = 8
 	Black PieceId = 16
 )
+
+func (p PieceId) Color() PieceId {
+	return p & PieceColorMask
+}
+
+func (p PieceId) Type() PieceId {
+	return p & PieceMask
+}
+
+func (p PieceId) IsOpponent(opp PieceId) bool {
+	return !p.IsEmpty() && !opp.IsEmpty() && p.Color() != opp.Color()
+}
+
+func (p PieceId) IsEmpty() bool {
+	return p == Empty
+}
