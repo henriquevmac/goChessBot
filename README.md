@@ -11,8 +11,8 @@ Work in progress.
 - [x] Drag and drop for moving pieces (no rule checking yet)
 - [x] Compact 16-bit move encoding with UCI output (`e2e4`, `e7e8q`)
 - [x] Precomputed move tables (distance to edge, knight, king and pawn attack targets)
-- [ ] Move generation
-- [ ] Attack and check detection
+- [x] Move generation
+- [x] Attack and check detection
 - [ ] Make / unmake move
 - [ ] Legal move filtering, verified with perft
 - [ ] Game end detection (checkmate, stalemate, draws)

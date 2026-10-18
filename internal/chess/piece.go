@@ -26,6 +26,14 @@ func (p PieceId) Color() PieceId {
 	return p & PieceColorMask
 }
 
+func (p PieceId) OppositeColor() PieceId {
+	if p.Color() == White {
+		return Black
+	} else {
+		return White
+	}
+}
+
 func (p PieceId) Type() PieceId {
 	return p & PieceMask
 }
