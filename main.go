@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ebiten.SetWindowSize(ui.BoardSize, ui.BoardSize)
+	ebiten.SetWindowSize(ui.BoardSize, ui.BoardSize+ui.PanelSize)
 	ebiten.SetWindowTitle("goChessBot")
 	game := ui.NewGame(images, board)
 	if err := ebiten.RunGame(game); err != nil {

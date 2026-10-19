@@ -7,6 +7,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"goChessBot/internal/bot"
@@ -15,6 +16,7 @@ import (
 
 const (
 	BoardSize = SquareSize * 8
+	PanelSize = 40
 )
 
 var (
@@ -66,7 +68,27 @@ func (g *Game) applyMove(m chess.Move) {
 	}
 }
 
+func inRect(x, y, rx, ry, rw, rh int) bool {
+	return x >= rx && x < rx+rw && y >= ry && y < ry+rh
+}
+
+func (g *Game) restart() {
+	board, err := chess.CreateBoard("")
+	if err != nil {
+		log.Println("Error Creating new game")
+		return
+	}
+	*g = *NewGame(g.Images, board)
+}
+
 func (g *Game) Update() error {
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		x, y := ebiten.CursorPosition()
+		if inRect(x, y, 5, BoardSize+5, len("Restart")*7, 30) {
+			g.restart()
+			return nil
+		}
+	}
 	if g.Result == chess.Ongoing {
 		if g.Board.ToMove != g.BotColor {
 			LetGoPiece(g)
@@ -74,7 +96,9 @@ func (g *Game) Update() error {
 		} else if !g.thinking {
 			g.thinking = true
 			boardCopy := *g.Board
-			go func() { g.botMoves <- g.Bot.BestMove(boardCopy) }()
+			ch := g.botMoves
+			b := g.Bot
+			go func() { ch <- b.BestMove(boardCopy) }()
 		} else {
 			select {
 			case m := <-g.botMoves:
@@ -103,6 +127,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			vector.FillRect(screen, x, y, SquareSize, SquareSize, c, false)
 		}
 	}
+	restartText := "Restart"
+	vector.FillRect(screen, 5, BoardSize+5, float32(len(restartText)*7), 30, darkSquare, false)
+	ebitenutil.DebugPrintAt(screen, restartText, 7, BoardSize+10)
 	if g.IsDragged {
 		DrawPossibleMoves(screen, g)
 	}
@@ -120,11 +147,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				msg += " Black Wins!"
 			}
 		}
-		vector.FillRect(screen, 7, 7, float32(len(msg)*7), 30, color.NRGBA{0, 0, 0, 160}, false)
-		ebitenutil.DebugPrintAt(screen, msg, 10, 10)
+		vector.FillRect(screen, 70, BoardSize+5, float32(len(msg)*7), 30, color.NRGBA{0, 0, 0, 160}, false)
+		ebitenutil.DebugPrintAt(screen, msg, 75, BoardSize+10)
 	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return BoardSize, BoardSize
+	return BoardSize, BoardSize + PanelSize
 }
