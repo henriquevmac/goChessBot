@@ -16,6 +16,7 @@ const (
 var (
 	lightSquare = color.RGBA{240, 217, 181, 255}
 	darkSquare  = color.RGBA{181, 136, 99, 255}
+	higlightSquare = color.NRGBA{20, 85, 30, 90}
 )
 
 type Game struct {
@@ -56,6 +57,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			y := float32(rank * SquareSize)
 			vector.FillRect(screen, x, y, SquareSize, SquareSize, c, false)
 		}
+	}
+	if g.IsDragged {
+		DrawPossibleMoves(screen, g)
 	}
 	DrawBoardPieces(screen, g)
 	if g.IsDragged {

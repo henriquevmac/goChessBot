@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"goChessBot/internal/chess"
 )
@@ -24,5 +25,16 @@ func DrawBoardPieces(screen *ebiten.Image, g *Game) {
 		posX := SquareSize * col
 		posY := SquareSize * boardRow
 		DrawPiece(screen, imgs[square], float64(posX), float64(posY))
+	}
+}
+
+func DrawPossibleMoves(screen *ebiten.Image, g *Game) {
+	for _, move := range g.LegalMoves {
+		if move.From() == g.DraggedPieceOrigin {
+			col, row := move.To() % 8, 7 - move.To() / 8
+			x := float32(col * SquareSize)
+			y := float32(row * SquareSize)
+			vector.FillRect(screen, x, y, SquareSize, SquareSize, higlightSquare, false)
+		}
 	}
 }
