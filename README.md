@@ -1,6 +1,6 @@
 # goChessBot
 
-A chess game written in Go, with a graphical board built on [Ebitengine](https://ebitengine.org/). The goal is a complete, rules-correct chess implementation that a chess bot can be built on top of.
+A chess game written in Go, with a graphical board built on [Ebitengine](https://ebitengine.org/), a rules-correct chess engine, and the tooling to build and measure chess bots: play against a bot in the window, or run bot-vs-bot matches from the terminal.
 
 ## Status
 
@@ -18,7 +18,11 @@ Work in progress.
 - [x] Game end detection (checkmate, stalemate, fifty-move rule, insufficient material, threefold repetition)
 - [x] Zobrist hashing
 - [x] Rule enforcement in the UI
-- [ ] The bot
+- [x] Restart button; Escape or right click cancels a selected piece
+- [x] Bot plumbing: a `Bot` interface, a random bot, and the bot playing Black in the UI
+- [x] Headless matches and a parallel arena command for bot-vs-bot testing
+- [x] Opening positions sampled from Lichess game databases
+- [ ] A bot that plays well
 
 ## Requirements
 
@@ -35,13 +39,55 @@ go run .
 
 The piece images are loaded from `./assets/chessPieces/` relative to the current directory, so run the game from the project root.
 
+You play White against the bot. Click a piece to select it (its legal destinations are highlighted), then click the target square. Escape or a right click cancels the selection, and the Restart button below the board starts a new game.
+
+## Bot matches
+
+`cmd/arena` plays bots against each other without opening a window:
+
+```sh
+go run ./cmd/arena -a random -b random -games 100
+go run ./cmd/arena -openings openings.txt -q
+```
+
+| Flag | Meaning |
+|---|---|
+| `-a`, `-b` | the two bots, by name (default `random`) |
+| `-games` | number of games (default 10; with `-openings`, every opening twice) |
+| `-openings` | file with one FEN per line; each position is played twice, once with each bot as White |
+| `-fen` | play every game from this one position instead |
+| `-maxplies` | stop unfinished games after this many half-moves (default 300) |
+| `-workers` | games played at the same time (default: one per CPU core) |
+| `-q` / `-v` | only the summary / also print every game's moves in UCI notation |
+
+Colors alternate between games. The summary shows each bot's wins and score (1 point per win, half per draw) and how the games ended, including forfeits if a bot ever returns an illegal move.
+
+### Opening positions
+
+Playing every game from the start position makes a deterministic bot repeat the same game, so matches are best run from varied positions. `scripts/pgn_to_fens.py` samples them from a PGN file, such as a [Lichess database](https://database.lichess.org/) download (`.pgn` or `.pgn.zst`):
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install chess zstandard
+.venv/bin/python scripts/pgn_to_fens.py lichess_db.pgn -o openings.txt -n 500 --min-elo 1800
+```
+
+It picks one position per game between half-moves 8 and 20 (`--min-ply`, `--max-ply`), skips variants and games that are over, and keeps an evenly spread random sample. Run it with `-h` for all options.
+
+### Adding a bot
+
+1. Add a `BotType` constant and return the new bot from `bot.New` in `internal/bot/bot.go`.
+2. Add the type to `allBotTypes` in `internal/bot/bot_test.go`, so the contract tests (legal moves only, no move when the game is over, safe to run in parallel) check it.
+3. Add its name to `botTypes` in `cmd/arena/main.go`, then measure it: `go run ./cmd/arena -a newbot -b random -openings openings.txt`.
+
 ## Testing
 
 ```sh
 go test ./...
+go test -race ./internal/bot/ ./internal/match/   # also check bots for data races
 ```
 
-The rules package (`internal/chess`) has no dependency on Ebitengine, so its tests run without opening a window.
+The rules, bot and match packages have no dependency on Ebitengine, so their tests run without opening a window.
 
 Move generation is verified with [perft](https://www.chessprogramming.org/Perft_Results): the number of possible move sequences from seven standard positions is compared against the known results, up to about 4.8 million positions per test. Add `-short` to skip the deepest runs.
 
@@ -51,6 +97,8 @@ Move generation is verified with [perft](https://www.chessprogramming.org/Perft_
 .
 ├── main.go                 Entry point: loads assets, creates the board, starts the game
 ├── assets/chessPieces/     Piece sprites (w/b + K, Q, R, B, Kn, P)
+├── cmd/arena/              Command-line bot-vs-bot matches
+├── scripts/pgn_to_fens.py  Samples opening positions (FENs) from a PGN file
 └── internal/
     ├── chess/              Chess rules, with no graphics dependencies; tests in *_test.go
     │   ├── piece.go        Piece and color encoding
@@ -63,8 +111,10 @@ Move generation is verified with [perft](https://www.chessprogramming.org/Perft_
     │   ├── legal.go        Legal move filtering, perft, finding a move from two squares
     │   ├── gameend.go      Check, checkmate, stalemate and draw detection
     │   └── zobrist.go      Zobrist hashing and threefold repetition
+    ├── bot/                The Bot interface and the bots; contract tests for every bot
+    ├── match/              Plays one game between two bots, without any UI
     └── ui/                 Ebitengine front end
-        ├── game.go         Game loop: Update, Draw, Layout; game result display
+        ├── game.go         Game loop, bot moves via a goroutine, restart, result display
         ├── board.go        Drawing pieces and move highlights
         └── pieces.go       Sprite loading and click-to-move input
 ```
@@ -87,3 +137,5 @@ The 4-bit flag marks special moves (double pawn push, castling, captures, en pas
 **Legal moves** are found by generating pseudo-legal moves, making each one, and keeping it only if the mover's king is not attacked afterwards. `MakeMove` returns an undo record that `UnmakeMove` uses to restore the position exactly.
 
 **Positions** are identified by a 64-bit Zobrist hash, updated incrementally in `MakeMove`. It covers the pieces, side to move, castling rights and en passant file, but not the move clocks. Threefold repetition compares the current hash with earlier positions back to the last capture or pawn move.
+
+**Bots** implement `BestMove(b chess.Board) chess.Move`. The board is passed by value, so a bot searches its own copy and can run in a goroutine while the UI keeps drawing, or many games can run in parallel in the arena.
