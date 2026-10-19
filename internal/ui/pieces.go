@@ -93,12 +93,16 @@ func outsideOfBorder(x int, y int) bool {
 }
 
 func LetGoPiece(g *Game) {
+	cleanup := func() {
+		g.IsDragged = false
+		g.DraggedPiece = 0
+		g.DraggedPieceOrigin = -1
+	}
+	if (inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)) && g.IsDragged {
+		cleanup()
+		return
+	}
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && g.IsDragged {
-		cleanup := func() {
-			g.IsDragged = false
-			g.DraggedPiece = 0
-			g.DraggedPieceOrigin = -1
-		}
 		defer cleanup()
 		x, y := ebiten.CursorPosition()
 		index, inside := squareAt(x, y)
