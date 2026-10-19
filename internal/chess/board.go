@@ -8,27 +8,31 @@ import (
 
 const startPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-type CastlingRights uint8;
+type CastlingRights uint8
 
 const (
-	WhiteKing CastlingRights = 8
+	WhiteKing  CastlingRights = 8
 	WhiteQueen CastlingRights = 4
-	BlackKing CastlingRights = 2
+	BlackKing  CastlingRights = 2
 	BlackQueen CastlingRights = 1
 )
 
 type Board struct {
-	Square [64]PieceId
-	ToMove PieceId
-	CastlingRights CastlingRights
+	Square          [64]PieceId
+	ToMove          PieceId
+	CastlingRights  CastlingRights
 	EnPassantSquare int
-	HalfmoveClock int
-	FullmoveNumber int
-	KingPos [2]int
+	HalfmoveClock   int
+	FullmoveNumber  int
+	KingPos         [2]int
 }
 
 func ConvertRowColToIdx(row int, col int) int {
-	return col + row * 8
+	return col + row*8
+}
+
+func ConvertIndexToRowCol(idx int) (int, int) {
+	return idx / 8, idx % 8
 }
 
 func CreateBoard(fen string) (*Board, error) {
@@ -42,7 +46,7 @@ func CreateBoard(fen string) (*Board, error) {
 	if fen == "" {
 		fen = startPosition
 	}
-	pieceTypeFromSymbol := map[rune]PieceId {
+	pieceTypeFromSymbol := map[rune]PieceId{
 		'k': King,
 		'p': Pawn,
 		'n': Knight,

@@ -1,18 +1,18 @@
 package chess
 
 type Undo struct {
-	captured PieceId
-	castlingRights CastlingRights
+	captured        PieceId
+	castlingRights  CastlingRights
 	enPassantSquare int
-	halfmoveClock int
+	halfmoveClock   int
 }
 
 func (b *Board) MakeMove(m Move) Undo {
 	undoRecord := Undo{
-		captured: Empty,
-		castlingRights: b.CastlingRights,
+		captured:        Empty,
+		castlingRights:  b.CastlingRights,
 		enPassantSquare: b.EnPassantSquare,
-		halfmoveClock: b.HalfmoveClock,
+		halfmoveClock:   b.HalfmoveClock,
 	}
 
 	if m.IsCapture() {
@@ -51,7 +51,7 @@ func (b *Board) MakeMove(m Move) Undo {
 
 	b.CastlingRights &= castlingKeep[m.From()] & castlingKeep[m.To()]
 
-	if m.IsCapture() || b.Square[m.From()] == Pawn | b.ToMove {
+	if m.IsCapture() || b.Square[m.From()] == Pawn|b.ToMove {
 		b.HalfmoveClock = 0
 	} else {
 		b.HalfmoveClock++

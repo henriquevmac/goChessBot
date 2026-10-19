@@ -15,7 +15,7 @@ Work in progress.
 - [x] Attack and check detection
 - [x] Make / unmake move
 - [x] Legal move filtering, verified with perft
-- [ ] Game end detection (checkmate, stalemate, draws)
+- [x] Game end detection (checkmate, stalemate, draws)
 - [x] Rule enforcement in the UI
 - [ ] The bot
 

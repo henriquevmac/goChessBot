@@ -12,20 +12,20 @@ import (
 )
 
 const (
-	piecesPath = "./assets/chessPieces/"
+	piecesPath        = "./assets/chessPieces/"
 	piecesSpriteScale = 0.55
 )
 
 var names = map[chess.PieceId]string{
-	chess.Empty: "",
-	chess.King: "K",
-	chess.Pawn: "P",
+	chess.Empty:  "",
+	chess.King:   "K",
+	chess.Pawn:   "P",
 	chess.Knight: "Kn",
 	chess.Bishop: "B",
-	chess.Rook: "R",
-	chess.Queen: "Q",
-	chess.White: "w",
-	chess.Black: "b",
+	chess.Rook:   "R",
+	chess.Queen:  "Q",
+	chess.White:  "w",
+	chess.Black:  "b",
 }
 
 func LoadPieces() (map[chess.PieceId]*ebiten.Image, error) {
@@ -51,7 +51,7 @@ func DrawPiece(screen *ebiten.Image, img *ebiten.Image, posX float64, posY float
 	op.GeoM.Scale(piecesSpriteScale, piecesSpriteScale)
 	offsetX := (SquareSize - (float64(img.Bounds().Dx()) * piecesSpriteScale)) / 2
 	offsetY := (SquareSize - (float64(img.Bounds().Dy()) * piecesSpriteScale)) / 2
-	op.GeoM.Translate(posX + offsetX, posY + offsetY)
+	op.GeoM.Translate(posX+offsetX, posY+offsetY)
 	screen.DrawImage(img, op)
 }
 
@@ -60,7 +60,7 @@ func DrawPieceCentered(screen *ebiten.Image, img *ebiten.Image, posX float64, po
 	op.GeoM.Scale(piecesSpriteScale, piecesSpriteScale)
 	offsetX := float64(img.Bounds().Dx()) * piecesSpriteScale / 2
 	offsetY := float64(img.Bounds().Dy()) * piecesSpriteScale / 2
-	op.GeoM.Translate(posX - offsetX, posY - offsetY)
+	op.GeoM.Translate(posX-offsetX, posY-offsetY)
 	screen.DrawImage(img, op)
 }
 
@@ -68,7 +68,7 @@ func squareAt(x, y int) (int, bool) {
 	if outsideOfBorder(x, y) {
 		return -1, false
 	}
-	col, row := x / SquareSize, 7 - y / SquareSize
+	col, row := x/SquareSize, 7-y/SquareSize
 	index := chess.ConvertRowColToIdx(row, col)
 	return index, true
 }
@@ -109,6 +109,7 @@ func LetGoPiece(g *Game) {
 		if legal {
 			g.Board.MakeMove(move)
 			g.LegalMoves = g.Board.GenerateLegalMoves(nil)
+			g.Result = g.Board.Result()
 		}
 	}
 }

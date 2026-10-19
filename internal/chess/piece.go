@@ -1,11 +1,11 @@
 package chess
 
 const (
-	PieceMask = 7
+	PieceMask      = 7
 	PieceColorMask = 24
 )
 
-type PieceId int;
+type PieceId int
 
 const (
 	Empty PieceId = iota

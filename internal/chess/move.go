@@ -1,7 +1,7 @@
 package chess
 
-type Move uint16;
-type MoveFlag uint8;
+type Move uint16
+type MoveFlag uint8
 
 const (
 	Normal MoveFlag = iota
@@ -10,23 +10,23 @@ const (
 	QueenCastle
 	Capture
 	EnPassant
-	PromoKn MoveFlag = 8
-	PromoB MoveFlag = 9
-	PromoR MoveFlag = 10
-	PromoQ MoveFlag = 11
+	PromoKn    MoveFlag = 8
+	PromoB     MoveFlag = 9
+	PromoR     MoveFlag = 10
+	PromoQ     MoveFlag = 11
 	PromoKnCap MoveFlag = 12
-	PromoBCap MoveFlag = 13
-	PromoRCap MoveFlag = 14
-	PromoQCap MoveFlag = 15
+	PromoBCap  MoveFlag = 13
+	PromoRCap  MoveFlag = 14
+	PromoQCap  MoveFlag = 15
 )
 
 const (
 	fromShift = 0
-	toShift = 6
+	toShift   = 6
 	flagShift = 12
 
 	squareMask Move = 0x3F
-	flagMask Move = 0xF
+	flagMask   Move = 0xF
 )
 
 func squareName(sq int) string {
@@ -36,7 +36,7 @@ func squareName(sq int) string {
 }
 
 func CreateMove(from, to int, flag MoveFlag) Move {
-	return (Move(from)&squareMask) << fromShift | (Move(to)&squareMask) << toShift | (Move(flag)&flagMask) << flagShift
+	return (Move(from)&squareMask)<<fromShift | (Move(to)&squareMask)<<toShift | (Move(flag)&flagMask)<<flagShift
 }
 
 func (m Move) From() int {
@@ -56,11 +56,11 @@ func (m Move) IsCastle() bool {
 }
 
 func (m Move) IsCapture() bool {
-	return m.Flag() & 4 != 0
+	return m.Flag()&4 != 0
 }
 
 func (m Move) IsPromotion() bool {
-	return m.Flag() & 8 != 0
+	return m.Flag()&8 != 0
 }
 
 func (m Move) GetPromotion() PieceId {
@@ -82,7 +82,7 @@ func (m Move) String() string {
 	str := squareName(m.From()) + squareName(m.To())
 	if m.IsPromotion() {
 		promoLetters := "nbrq"
-		return str + string(promoLetters[m.Flag() & 3])
+		return str + string(promoLetters[m.Flag()&3])
 	}
 	return str
 }

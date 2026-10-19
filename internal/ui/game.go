@@ -4,45 +4,50 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"goChessBot/internal/chess"
 )
 
 const (
-	BoardSize  = SquareSize * 8
+	BoardSize = SquareSize * 8
 )
 
 var (
-	lightSquare = color.RGBA{240, 217, 181, 255}
-	darkSquare  = color.RGBA{181, 136, 99, 255}
-	higlightSquare = color.NRGBA{20, 85, 30, 90}
+	lightSquare     = color.RGBA{240, 217, 181, 255}
+	darkSquare      = color.RGBA{181, 136, 99, 255}
+	highlightSquare = color.NRGBA{20, 85, 30, 90}
 )
 
 type Game struct {
-	Images map[chess.PieceId]*ebiten.Image
-	Board *chess.Board
-	IsDragged bool
-	DraggedPiece chess.PieceId
+	Images             map[chess.PieceId]*ebiten.Image
+	Board              *chess.Board
+	IsDragged          bool
+	DraggedPiece       chess.PieceId
 	DraggedPieceOrigin int
-	LegalMoves []chess.Move
+	LegalMoves         []chess.Move
+	Result			   chess.GameResult
 }
 
 func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 	legalMoves := board.GenerateLegalMoves(nil)
 	return &Game{
-		Images: images,
-		Board: board,
-		IsDragged: false,
-		DraggedPiece: chess.Empty,
+		Images:             images,
+		Board:              board,
+		IsDragged:          false,
+		DraggedPiece:       chess.Empty,
 		DraggedPieceOrigin: -1,
-		LegalMoves: legalMoves,
+		LegalMoves:         legalMoves,
+		Result: 			chess.Ongoing,
 	}
 }
 
 func (g *Game) Update() error {
-	LetGoPiece(g)
-	HoldPiece(g)
+	if g.Result == chess.Ongoing {
+		LetGoPiece(g)
+		HoldPiece(g)
+	}
 	return nil
 }
 
@@ -65,6 +70,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.IsDragged {
 		x, y := ebiten.CursorPosition()
 		DrawPieceCentered(screen, g.Images[g.DraggedPiece], float64(x), float64(y))
+	}
+	if g.Result != chess.Ongoing {
+		msg := "Game Ended Via: " + g.Result.String()
+		vector.FillRect(screen, 7, 7, float32(len(msg) * 7), 30, color.NRGBA{0, 0, 0, 160}, false)
+		ebitenutil.DebugPrintAt(screen, msg, 10, 10)
 	}
 }
 
