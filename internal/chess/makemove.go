@@ -68,6 +68,7 @@ func (b *Board) MakeMove(m Move) Undo {
 	}
 	b.Square[m.From()] = Empty
 	b.Square[m.To()] = piece
+
 	return undoRecord
 }
 

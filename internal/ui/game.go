@@ -24,11 +24,24 @@ type Game struct {
 	IsDragged bool
 	DraggedPiece chess.PieceId
 	DraggedPieceOrigin int
+	LegalMoves []chess.Move
+}
+
+func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
+	legalMoves := board.GenerateLegalMoves(nil)
+	return &Game{
+		Images: images,
+		Board: board,
+		IsDragged: false,
+		DraggedPiece: chess.Empty,
+		DraggedPieceOrigin: -1,
+		LegalMoves: legalMoves,
+	}
 }
 
 func (g *Game) Update() error {
-	HoldPiece(g)
 	LetGoPiece(g)
+	HoldPiece(g)
 	return nil
 }
 
@@ -44,7 +57,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			vector.FillRect(screen, x, y, SquareSize, SquareSize, c, false)
 		}
 	}
-	DrawBoardPieces(screen, g.Board, g.Images)
+	DrawBoardPieces(screen, g)
 	if g.IsDragged {
 		x, y := ebiten.CursorPosition()
 		DrawPieceCentered(screen, g.Images[g.DraggedPiece], float64(x), float64(y))

@@ -8,9 +8,14 @@ import (
 
 const SquareSize = 80;
 
-func DrawBoardPieces(screen *ebiten.Image, b *chess.Board, imgs map[chess.PieceId]*ebiten.Image) {
+func DrawBoardPieces(screen *ebiten.Image, g *Game) {
+	b := g.Board
+	imgs := g.Images
 	for idx, square := range b.Square {
-		if square & chess.PieceMask == 0 {
+		if square & chess.PieceMask == chess.Empty {
+			continue
+		}
+		if g.IsDragged && g.DraggedPieceOrigin == idx {
 			continue
 		}
 		row := idx / 8

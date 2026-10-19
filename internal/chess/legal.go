@@ -34,3 +34,18 @@ func (b *Board) Perft(depth int) int {
 
 	return total
 }
+
+func (b *Board) FindLegalMove(from, to int, promotion PieceId) (Move, bool) {
+	for _, move := range b.GenerateLegalMoves(nil) {
+		if move.From() == from && move.To() == to {
+			if move.IsPromotion() {
+				if move.GetPromotion() == promotion {
+					return move, true
+				}
+			} else {
+				return move, true
+			}
+		}
+	}
+	return 0, false
+}
