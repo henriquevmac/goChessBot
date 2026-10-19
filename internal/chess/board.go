@@ -25,6 +25,7 @@ type Board struct {
 	HalfmoveClock   int
 	FullmoveNumber  int
 	KingPos         [2]int
+	Hash            uint64
 }
 
 func ConvertRowColToIdx(row int, col int) int {
@@ -119,5 +120,16 @@ func CreateBoard(fen string) (*Board, error) {
 			FullmoveNumber = parseFull
 		}
 	}
-	return &Board{Square, ToMove, castlingRights, EnPassantSquare, HalfmoveClock, FullmoveNumber, KingPos}, nil
+	board := &Board{
+		Square,
+		ToMove,
+		castlingRights,
+		EnPassantSquare,
+		HalfmoveClock,
+		FullmoveNumber,
+		KingPos,
+		0,
+	}
+	board.Hash = board.computeHash()
+	return board, nil
 }

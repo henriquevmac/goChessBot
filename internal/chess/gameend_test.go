@@ -113,3 +113,51 @@ func TestResultAfterMoves(t *testing.T) {
 		t.Errorf("after fool's mate: the mated side should be White (to move), got %d", b.ToMove)
 	}
 }
+
+// ResultWithMoves, given the legal moves, must agree with Result for every kind of outcome.
+func TestResultWithMovesMatchesResult(t *testing.T) {
+	fens := append([]string{
+		"R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1",                             // checkmate
+		"rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3", // checkmate
+		"7k/5Q2/6K1/8/8/8/8/8 b - - 0 1",                                // stalemate
+		"k7/8/1Q6/8/8/8/8/7K b - - 0 1",                                 // stalemate
+		"4k3/8/8/8/8/8/8/R3K3 w - - 100 80",                             // fifty-move rule
+		"R5k1/5ppp/8/8/8/8/8/6K1 b - - 100 80",                          // checkmate at 100
+		"4k3/8/8/8/8/8/8/4K3 w - - 0 1",                                 // insufficient material
+		"4kb2/8/8/8/8/8/8/2B1K3 w - - 0 1",                              // insufficient material
+		"4k3/8/8/8/8/8/4r3/4K3 w - - 0 1",                               // ongoing, in check
+	}, makeUnmakeFENs...)
+
+	for _, fen := range fens {
+		b := mustBoard(t, fen)
+		before := *b
+		want := b.Result()
+		if got := b.ResultWithMoves(b.GenerateLegalMoves(nil)); got != want {
+			t.Errorf("%s: ResultWithMoves = %v, but Result = %v", fen, got, want)
+		}
+		if diff := boardDiff(b, &before); diff != "" {
+			t.Errorf("%s: ResultWithMoves changed the board:\n  %s", fen, diff)
+		}
+	}
+}
+
+// ResultWithMoves must decide from the moves it is given, not generate its own:
+// an empty list in a position with legal moves reads as checkmate or stalemate.
+func TestResultWithMovesUsesGivenMoves(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  string
+		want GameResult
+	}{
+		{"not in check, no moves given", startFEN, Stalemate},
+		{"in check, no moves given", "4k3/8/8/8/8/8/4r3/4K3 w - - 0 1", Checkmate},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := mustBoard(t, tt.fen)
+			if got := b.ResultWithMoves(nil); got != tt.want {
+				t.Errorf("%s: ResultWithMoves(nil) = %v, want %v", tt.fen, got, tt.want)
+			}
+		})
+	}
+}

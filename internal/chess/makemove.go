@@ -5,6 +5,7 @@ type Undo struct {
 	castlingRights  CastlingRights
 	enPassantSquare int
 	halfmoveClock   int
+	hash            uint64
 }
 
 func (b *Board) MakeMove(m Move) Undo {
@@ -13,10 +14,14 @@ func (b *Board) MakeMove(m Move) Undo {
 		castlingRights:  b.CastlingRights,
 		enPassantSquare: b.EnPassantSquare,
 		halfmoveClock:   b.HalfmoveClock,
+		hash:            b.Hash,
 	}
 
 	if m.IsCapture() {
 		undoRecord.captured = b.Square[m.To()]
+		if !(m.Flag() == EnPassant) {
+			b.Hash ^= zobristPiece[undoRecord.captured][m.To()]
+		}
 	}
 
 	piece := b.Square[m.From()]
@@ -29,6 +34,7 @@ func (b *Board) MakeMove(m Move) Undo {
 	if m.Flag() == EnPassant {
 		idx := m.To() - pawnInfo[colorConversion(color)].forward
 		undoRecord.captured = b.Square[idx]
+		b.Hash ^= zobristPiece[b.Square[idx]][idx]
 		b.Square[idx] = Empty
 	}
 
@@ -39,17 +45,27 @@ func (b *Board) MakeMove(m Move) Undo {
 		}
 		rookFrom := castlingInfo[colorConversion(color)][side].rookFrom
 		rookTo := castlingInfo[colorConversion(color)][side].rookTo
+		b.Hash ^= zobristPiece[Rook|color][rookFrom]
 		b.Square[rookFrom] = Empty
 		b.Square[rookTo] = Rook | color
+		b.Hash ^= zobristPiece[Rook|color][rookTo]
 	}
 
+	if b.EnPassantSquare != -1 {
+		b.Hash ^= zobristEP[b.EnPassantSquare%8]
+	}
 	if m.Flag() == DoublePawn {
 		b.EnPassantSquare = m.To() - pawnInfo[colorConversion(color)].forward
 	} else {
 		b.EnPassantSquare = -1
 	}
+	if b.EnPassantSquare != -1 {
+		b.Hash ^= zobristEP[b.EnPassantSquare%8]
+	}
 
+	b.Hash ^= zobristCastling[b.CastlingRights]
 	b.CastlingRights &= castlingKeep[m.From()] & castlingKeep[m.To()]
+	b.Hash ^= zobristCastling[b.CastlingRights]
 
 	if m.IsCapture() || b.Square[m.From()] == Pawn|b.ToMove {
 		b.HalfmoveClock = 0
@@ -62,12 +78,16 @@ func (b *Board) MakeMove(m Move) Undo {
 	}
 
 	b.ToMove = color.OppositeColor()
+	b.Hash ^= zobristBlack
 
 	if b.Square[m.From()].Type() == King {
 		b.KingPos[colorConversion(color)] = m.To()
 	}
+
+	b.Hash ^= zobristPiece[b.Square[m.From()]][m.From()]
 	b.Square[m.From()] = Empty
 	b.Square[m.To()] = piece
+	b.Hash ^= zobristPiece[piece][m.To()]
 
 	return undoRecord
 }
@@ -88,6 +108,7 @@ func (b *Board) UnmakeMove(m Move, u Undo) {
 	b.HalfmoveClock = u.halfmoveClock
 	b.EnPassantSquare = u.enPassantSquare
 	b.CastlingRights = u.castlingRights
+	b.Hash = u.hash
 
 	if m.IsCastle() {
 		side := 0

@@ -27,7 +27,8 @@ type Game struct {
 	DraggedPiece       chess.PieceId
 	DraggedPieceOrigin int
 	LegalMoves         []chess.Move
-	Result			   chess.GameResult
+	Result             chess.GameResult
+	History            []uint64
 }
 
 func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
@@ -39,7 +40,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		DraggedPiece:       chess.Empty,
 		DraggedPieceOrigin: -1,
 		LegalMoves:         legalMoves,
-		Result: 			board.Result(),
+		Result:             board.ResultWithMoves(legalMoves),
 	}
 }
 
@@ -80,7 +81,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 				msg += " Black Wins!"
 			}
 		}
-		vector.FillRect(screen, 7, 7, float32(len(msg) * 7), 30, color.NRGBA{0, 0, 0, 160}, false)
+		vector.FillRect(screen, 7, 7, float32(len(msg)*7), 30, color.NRGBA{0, 0, 0, 160}, false)
 		ebitenutil.DebugPrintAt(screen, msg, 10, 10)
 	}
 }

@@ -8,6 +8,7 @@ const (
 	Stalemate
 	FiftyMoveRule
 	InsufficientMaterial
+	ThreeFoldRepetition
 )
 
 func (gR GameResult) String() string {
@@ -22,6 +23,8 @@ func (gR GameResult) String() string {
 		return "FiftyMoveRule"
 	case InsufficientMaterial:
 		return "InsufficientMaterial"
+	case ThreeFoldRepetition:
+		return "ThreeFoldRepetition"
 	default:
 		return ""
 	}
@@ -50,8 +53,8 @@ func (b *Board) insufficientMaterial() bool {
 	return (knights == 0 && (bishops[0] == 0 || bishops[1] == 0)) || (knights == 1 && bishops[0]+bishops[1] == 0)
 }
 
-func (b *Board) Result() GameResult {
-	if len(b.GenerateLegalMoves(nil)) == 0 {
+func (b *Board) ResultWithMoves(moves []Move) GameResult {
+	if len(moves) == 0 {
 		if b.InCheck() {
 			return Checkmate
 		} else {
@@ -65,4 +68,8 @@ func (b *Board) Result() GameResult {
 		return InsufficientMaterial
 	}
 	return Ongoing
+}
+
+func (b *Board) Result() GameResult {
+	return b.ResultWithMoves(b.GenerateLegalMoves(nil))
 }
