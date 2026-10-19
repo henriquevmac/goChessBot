@@ -1,1 +1,3 @@
 .venv/
+*.pgn
+*.pgn.zst
