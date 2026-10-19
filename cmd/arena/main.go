@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -104,6 +106,37 @@ func percent(part, total int) float64 {
 	return 100 * float64(part) / float64(total)
 }
 
+func loadOpenings(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var fens []string
+	scanner := bufio.NewScanner(f)
+	line := 0
+	for scanner.Scan() {
+		line++
+		text := strings.TrimSpace(scanner.Text())
+		if text == "" || strings.HasPrefix(text, "#") {
+			continue
+		}
+
+		if _, err := chess.CreateBoard(text); err != nil {
+			return nil, fmt.Errorf("%s line %d: %w", path, line, err)
+		}
+		fens = append(fens, text)
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	if len(fens) == 0 {
+		return nil, fmt.Errorf("%s: no positions found", path)
+	}
+	return fens, nil
+}
+
 func main() {
 	botA := flag.String("a", "random", "first bot")
 	botB := flag.String("b", "random", "second bot")
@@ -113,11 +146,34 @@ func main() {
 	verbose := flag.Bool("v", false, "also print the moves of every game")
 	quiet := flag.Bool("q", false, "only print the summary")
 	workers := flag.Int("workers", runtime.NumCPU(), "number of games played at the same time")
+	openingsFile := flag.String("openings", "", "file with one FEN per line; each opening is played twice, colors swapped")
 	flag.Parse()
+
+	set := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) {
+		set[f.Name] = true
+	})
+
+	if *fen != "" && *openingsFile != "" {
+		log.Fatal("use either -fen or -openings, not both")
+	}
 
 	if _, err := chess.CreateBoard(*fen); err != nil {
 		log.Fatalf("invalid -fen: %v", err)
 	}
+
+	starts := []string{*fen}
+	if *openingsFile != "" {
+		startsTemp, err := loadOpenings(*openingsFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		starts = startsTemp
+		if !set["games"] {
+			*games = len(starts) * 2
+		}
+	}
+
 	*workers = max(1, min(*workers, *games))
 
 	a, err := newBot(*botA)
@@ -131,7 +187,7 @@ func main() {
 	nameA := *botA + " (A)"
 	nameB := *botB + " (B)"
 
-	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, %d workers\n", nameA, nameB, *games, *maxPlies, *workers)
+	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, %d workers, openings: %s (%d positions)\n", nameA, nameB, *games, *maxPlies, *workers, *openingsFile, len(starts))
 	if *fen != "" {
 		fmt.Printf("start position: %s\n", *fen)
 	}
@@ -145,7 +201,7 @@ func main() {
 	for w := 0; w < *workers; w++ {
 		go func() {
 			for i := range jobs {
-				done <- playGame(i, a, b, *fen, *maxPlies)
+				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies)
 			}
 		}()
 	}
