@@ -2,11 +2,14 @@ package ui
 
 import (
 	"image/color"
+	"log"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"goChessBot/internal/bot"
 	"goChessBot/internal/chess"
 )
 
@@ -29,6 +32,10 @@ type Game struct {
 	LegalMoves         []chess.Move
 	Result             chess.GameResult
 	History            []uint64
+	Bot                bot.Bot
+	BotColor           chess.PieceId
+	thinking           bool
+	botMoves           chan chess.Move
 }
 
 func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
@@ -41,13 +48,45 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		DraggedPieceOrigin: -1,
 		LegalMoves:         legalMoves,
 		Result:             board.ResultWithMoves(legalMoves),
+		History:            []uint64{},
+		Bot:                bot.New(bot.Random),
+		BotColor:           chess.Black,
+		thinking:           false,
+		botMoves:           make(chan chess.Move, 1),
+	}
+}
+
+func (g *Game) applyMove(m chess.Move) {
+	g.History = append(g.History, g.Board.Hash)
+	g.Board.MakeMove(m)
+	g.LegalMoves = g.Board.GenerateLegalMoves(nil)
+	g.Result = g.Board.ResultWithMoves(g.LegalMoves)
+	if g.Result == chess.Ongoing && g.Board.IsThreeFoldRepetition(g.History) {
+		g.Result = chess.ThreeFoldRepetition
 	}
 }
 
 func (g *Game) Update() error {
 	if g.Result == chess.Ongoing {
-		LetGoPiece(g)
-		HoldPiece(g)
+		if g.Board.ToMove != g.BotColor {
+			LetGoPiece(g)
+			HoldPiece(g)
+		} else if !g.thinking {
+			g.thinking = true
+			boardCopy := *g.Board
+			go func() { g.botMoves <- g.Bot.BestMove(boardCopy) }()
+		} else {
+			select {
+			case m := <-g.botMoves:
+				g.thinking = false
+				if slices.Contains(g.LegalMoves, m) {
+					g.applyMove(m)
+				} else {
+					log.Fatal("Bot reported buggy move: " + m.String())
+				}
+			default:
+			}
+		}
 	}
 	return nil
 }

@@ -111,13 +111,7 @@ func LetGoPiece(g *Game) {
 		}
 		move, legal := g.Board.FindLegalMove(g.DraggedPieceOrigin, index, chess.Queen)
 		if legal {
-			g.History = append(g.History, g.Board.Hash)
-			g.Board.MakeMove(move)
-			g.LegalMoves = g.Board.GenerateLegalMoves(nil)
-			g.Result = g.Board.ResultWithMoves(g.LegalMoves)
-			if g.Result == chess.Ongoing && g.Board.IsThreeFoldRepetition(g.History) {
-				g.Result = chess.ThreeFoldRepetition
-			}
+			g.applyMove(move)
 		}
 	}
 }
