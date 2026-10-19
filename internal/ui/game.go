@@ -39,7 +39,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		DraggedPiece:       chess.Empty,
 		DraggedPieceOrigin: -1,
 		LegalMoves:         legalMoves,
-		Result: 			chess.Ongoing,
+		Result: 			board.Result(),
 	}
 }
 
@@ -73,6 +73,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	if g.Result != chess.Ongoing {
 		msg := "Game Ended Via: " + g.Result.String()
+		if g.Result == chess.Checkmate {
+			if g.Board.ToMove.OppositeColor() == chess.White {
+				msg += " White Wins!"
+			} else {
+				msg += " Black Wins!"
+			}
+		}
 		vector.FillRect(screen, 7, 7, float32(len(msg) * 7), 30, color.NRGBA{0, 0, 0, 160}, false)
 		ebitenutil.DebugPrintAt(screen, msg, 10, 10)
 	}
