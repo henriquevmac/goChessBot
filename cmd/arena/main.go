@@ -17,6 +17,7 @@ import (
 
 type tally struct {
 	winsA, winsB, draws, unfinished, forfeitsA, forfeitsB int
+	adjudicatedWins, adjudicatedDraws                     int
 	plies                                                 int
 	results                                               map[chess.GameResult]int
 }
@@ -41,7 +42,7 @@ type finishedGame struct {
 	elapsed  time.Duration
 }
 
-func playGame(i int, a, b bot.Bot, fen string, maxPlies int) finishedGame {
+func playGame(i int, a, b bot.Bot, fen string, maxPlies, adjudicate int) finishedGame {
 	aIsWhite := i%2 == 0
 	white, black := a, b
 	if !aIsWhite {
@@ -52,16 +53,26 @@ func playGame(i int, a, b bot.Bot, fen string, maxPlies int) finishedGame {
 	if err != nil {
 		log.Fatal(err)
 	}
+	g = match.Adjudicate(g, adjudicate)
 	return finishedGame{index: i, aIsWhite: aIsWhite, game: g, elapsed: time.Since(start)}
 }
 
 func (t *tally) add(fg finishedGame) {
 	g := fg.game
 	t.plies += len(g.Moves)
-	if !g.Forfeit {
+	switch {
+	case g.Adjudicated && g.Winner == 0:
+		t.adjudicatedDraws++
+	case g.Adjudicated:
+		t.adjudicatedWins++
+	case !g.Forfeit:
 		t.results[g.Result]++
 	}
 	if g.Winner == 0 {
+		if g.Adjudicated {
+			t.draws++
+			return
+		}
 		if g.Result == chess.Ongoing {
 			t.unfinished++
 		} else {
@@ -91,6 +102,10 @@ func outcome(g match.Game, whiteName, blackName string) string {
 	switch {
 	case g.Forfeit:
 		return fmt.Sprintf("%s wins (illegal move by %s)", winner, loser)
+	case g.Adjudicated && g.Winner == 0:
+		return fmt.Sprintf("draw on material (difference %d)", abs(match.Material(&g.Final)))
+	case g.Adjudicated:
+		return fmt.Sprintf("%s wins on material (up %d)", winner, abs(match.Material(&g.Final)))
 	case g.Result == chess.Checkmate:
 		return fmt.Sprintf("%s wins by checkmate", winner)
 	case g.Result == chess.Ongoing:
@@ -98,6 +113,13 @@ func outcome(g match.Game, whiteName, blackName string) string {
 	default:
 		return fmt.Sprintf("draw (%v)", g.Result)
 	}
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 func percent(part, total int) float64 {
@@ -148,6 +170,7 @@ func main() {
 	quiet := flag.Bool("q", false, "only print the summary")
 	workers := flag.Int("workers", runtime.NumCPU(), "number of games played at the same time")
 	openingsFile := flag.String("openings", "", "file with one FEN per line; each opening is played twice, colors swapped")
+	adjudicate := flag.Int("adjudicate", 0, "decide games that hit the move limit by material: a lead of at least this many centipawns wins, less is a draw (0 = off)")
 	flag.Parse()
 
 	set := map[string]bool{}
@@ -188,9 +211,15 @@ func main() {
 	nameA := *botA + " (A)"
 	nameB := *botB + " (B)"
 
-	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, %d workers, openings: %s (%d positions)\n", nameA, nameB, *games, *maxPlies, *workers, *openingsFile, len(starts))
+	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, %d workers\n", nameA, nameB, *games, *maxPlies, *workers)
+	if *openingsFile != "" {
+		fmt.Printf("openings: %s (%d positions)\n", *openingsFile, len(starts))
+	}
 	if *fen != "" {
 		fmt.Printf("start position: %s\n", *fen)
+	}
+	if *adjudicate > 0 {
+		fmt.Printf("adjudication: games reaching the move limit are won by a material lead of %d or more, otherwise drawn\n", *adjudicate)
 	}
 	fmt.Println()
 
@@ -202,7 +231,7 @@ func main() {
 	for w := 0; w < *workers; w++ {
 		go func() {
 			for i := range jobs {
-				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies)
+				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, *adjudicate)
 			}
 		}()
 	}
@@ -278,6 +307,12 @@ func main() {
 			}
 			fmt.Printf("    %-22s %4d\n", label, n)
 		}
+	}
+	if t.adjudicatedWins > 0 {
+		fmt.Printf("    %-22s %4d\n", "adjudicated win", t.adjudicatedWins)
+	}
+	if t.adjudicatedDraws > 0 {
+		fmt.Printf("    %-22s %4d\n", "adjudicated draw", t.adjudicatedDraws)
 	}
 	if t.forfeitsA+t.forfeitsB > 0 {
 		fmt.Printf("    %-22s %4d  (%s: %d, %s: %d)\n", "illegal move (forfeit)",

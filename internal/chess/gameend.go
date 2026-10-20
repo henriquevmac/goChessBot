@@ -35,22 +35,31 @@ func (b *Board) InCheck() bool {
 }
 
 func (b *Board) insufficientMaterial() bool {
-	bishops := [2]int{0, 0}
-	knights := 0
-	for idx, piece := range b.Square {
-		if piece.Type() == Pawn || piece.Type() == Rook || piece.Type() == Queen {
-			return false
-		}
-		if piece.Type() == Bishop {
-			row, col := ConvertIndexToRowCol(idx)
-			sqCol := (row + col) % 2
-			bishops[sqCol]++
-		} else if piece.Type() == Knight {
-			knights++
-		}
+	if b.Counts[Pawn|White]+b.Counts[Pawn|Black] > 0 ||
+		b.Counts[Rook|White]+b.Counts[Rook|Black] > 0 ||
+		b.Counts[Queen|White]+b.Counts[Queen|Black] > 0 {
+		return false
 	}
 
-	return (knights == 0 && (bishops[0] == 0 || bishops[1] == 0)) || (knights == 1 && bishops[0]+bishops[1] == 0)
+	knights := b.Counts[Knight|White] + b.Counts[Knight|Black]
+	bishops := b.Counts[Bishop|White] + b.Counts[Bishop|Black]
+
+	if bishops == 0 {
+		return knights <= 1
+	}
+
+	if knights > 0 {
+		return false
+	}
+
+	var onColor [2]int
+	for idx, piece := range b.Square {
+		if piece.Type() == Bishop {
+			row, col := ConvertIndexToRowCol(idx)
+			onColor[(row+col)%2]++
+		}
+	}
+	return onColor[0] == 0 || onColor[1] == 0
 }
 
 func (b *Board) ResultWithMoves(moves []Move) GameResult {

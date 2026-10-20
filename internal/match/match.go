@@ -6,11 +6,21 @@ import (
 	"slices"
 )
 
+var pieceValues = [7]int{
+	chess.Pawn:   100,
+	chess.Knight: 320,
+	chess.Bishop: 330,
+	chess.Rook:   500,
+	chess.Queen:  900,
+}
+
 type Game struct {
-	Moves   []chess.Move
-	Result  chess.GameResult
-	Winner  chess.PieceId
-	Forfeit bool
+	Moves       []chess.Move
+	Result      chess.GameResult
+	Winner      chess.PieceId
+	Forfeit     bool
+	Final       chess.Board
+	Adjudicated bool
 }
 
 func getCurrentGameState(board *chess.Board, legalMoves, moves []chess.Move, history []uint64) (Game, bool) {
@@ -22,7 +32,7 @@ func getCurrentGameState(board *chess.Board, legalMoves, moves []chess.Move, his
 		return Game{}, false
 	}
 
-	g := Game{Moves: moves, Result: result}
+	g := Game{Moves: moves, Result: result, Final: *board, Adjudicated: false}
 	if result == chess.Checkmate {
 		g.Winner = board.ToMove.OppositeColor()
 	}
@@ -52,10 +62,12 @@ func Play(white, black bot.Bot, fen string, maxPlies int) (Game, error) {
 		}
 		if !slices.Contains(legalMoves, move) {
 			return Game{
-				Moves:   moves,
-				Result:  chess.Ongoing,
-				Winner:  board.ToMove.OppositeColor(),
-				Forfeit: true,
+				Moves:       moves,
+				Result:      chess.Ongoing,
+				Winner:      board.ToMove.OppositeColor(),
+				Forfeit:     true,
+				Final:       *board,
+				Adjudicated: false,
 			}, nil
 		}
 		history = append(history, board.Hash)
@@ -67,9 +79,35 @@ func Play(white, black bot.Bot, fen string, maxPlies int) (Game, error) {
 		return g, nil
 	}
 	return Game{
-		Moves:   moves,
-		Result:  chess.Ongoing,
-		Winner:  chess.Empty,
-		Forfeit: false,
+		Moves:       moves,
+		Result:      chess.Ongoing,
+		Winner:      chess.Empty,
+		Forfeit:     false,
+		Final:       *board,
+		Adjudicated: false,
 	}, nil
+}
+
+func Material(b *chess.Board) int {
+	matCount := 0
+	for pieceId, val := range pieceValues {
+		matCount += val*int(b.Counts[chess.PieceId(pieceId)|chess.White]) - val*int(b.Counts[chess.PieceId(pieceId)|chess.Black])
+	}
+	return matCount
+}
+
+func Adjudicate(g Game, threshold int) Game {
+	if threshold <= 0 || g.Result != chess.Ongoing || g.Forfeit {
+		return g
+	}
+	material := Material(&g.Final)
+	g.Adjudicated = true
+	if material >= threshold {
+		g.Winner = chess.White
+	} else if material <= -threshold {
+		g.Winner = chess.Black
+	} else {
+		g.Winner = 0
+	}
+	return g
 }
