@@ -45,14 +45,17 @@ func (g greedyBot) BestMove(b chess.Board) chess.Move {
 	bestMove := chess.Move(0)
 	for _, move := range legalMoves {
 		if move.IsCapture() {
+			value := 0
 			if move.Flag() == chess.EnPassant {
-				if materialWon < pieceValues[chess.Pawn] {
-					materialWon = pieceValues[chess.Pawn]
+				value = pieceValues[chess.Pawn]
+				if materialWon < value {
+					materialWon = value
 					bestMove = move
 				}
 			} else {
-				if materialWon < pieceValues[b.Square[move.To()].Type()] {
-					materialWon = pieceValues[b.Square[move.To()].Type()]
+				value = pieceValues[b.Square[move.To()].Type()]
+				if materialWon < value {
+					materialWon = value
 					bestMove = move
 				}
 			}
