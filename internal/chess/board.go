@@ -59,19 +59,26 @@ func CreateBoard(fen string) (*Board, error) {
 
 	fenParts := strings.Fields(fen)
 	if len(fenParts) == 0 {
-		return nil, fmt.Errorf("Empty fen string")
+		return nil, fmt.Errorf("empty fen string")
 	}
 	file, rank := 0, 7
 	for _, symbol := range fenParts[0] {
 		if symbol == '/' {
-			if file != 7 {
-				return nil, fmt.Errorf("Shorter rank: %d", rank)
+			if file != 8 {
+				return nil, fmt.Errorf("shorter rank: %d", rank)
+			}
+			if rank == 0 {
+				return nil, fmt.Errorf("too many ranks")
 			}
 			file = 0
 			rank--
 		} else {
 			if unicode.IsDigit(symbol) {
-				file += int(symbol - '0')
+				emptySpaces := int(symbol - '0')
+				if emptySpaces < 1 || file+emptySpaces > 8 {
+					return nil, fmt.Errorf("impossible number of empty spaces")
+				}
+				file += emptySpaces
 			} else {
 				pieceColor := Black
 				if unicode.IsUpper(symbol) {
@@ -79,15 +86,15 @@ func CreateBoard(fen string) (*Board, error) {
 				}
 				pieceId, ok := pieceTypeFromSymbol[unicode.ToLower(symbol)]
 				if !ok {
-					return nil, fmt.Errorf("Unknown symbol: %c", symbol)
+					return nil, fmt.Errorf("unknown symbol: %c", symbol)
 				}
 				if file >= 8 {
-					return nil, fmt.Errorf("Too many symbols on rank: %d", rank)
+					return nil, fmt.Errorf("too many symbols on rank: %d", rank)
 				}
 				index := ConvertRowColToIdx(rank, file)
 				if pieceId == King {
 					if KingPos[colorConversion(pieceColor)] != -1 {
-						return nil, fmt.Errorf("More than one king for a color")
+						return nil, fmt.Errorf("more than one king for a color")
 					}
 					KingPos[colorConversion(pieceColor)] = index
 				}
@@ -95,6 +102,9 @@ func CreateBoard(fen string) (*Board, error) {
 				file++
 			}
 		}
+	}
+	if rank != 0 || file != 8 {
+		return nil, fmt.Errorf("wrong number of rows and cols: %d %d", 8-rank, file)
 	}
 	for idx, part := range fenParts[1:] {
 		switch idx {
@@ -105,7 +115,7 @@ func CreateBoard(fen string) (*Board, error) {
 			case "w":
 				ToMove = White
 			default:
-				return nil, fmt.Errorf("Wrong symbol for starting side")
+				return nil, fmt.Errorf("wrong symbol for starting side")
 			}
 		case 1:
 			if strings.Contains(part, "K") {
@@ -120,22 +130,25 @@ func CreateBoard(fen string) (*Board, error) {
 			if strings.Contains(part, "q") {
 				castlingRights |= BlackQueen
 			}
-			for _, rune := range part {
-				if rune != '-' && unicode.ToLower(rune) != 'k' && unicode.ToLower(rune) != 'q' {
-					return nil, fmt.Errorf("Wrong symbol for castling Rights: %c", rune)
+			if strings.Contains(part, "-") && len(part) != 1 {
+				return nil, fmt.Errorf("wrong castling rights")
+			}
+			for _, c := range part {
+				if c != '-' && unicode.ToLower(c) != 'k' && unicode.ToLower(c) != 'q' {
+					return nil, fmt.Errorf("wrong symbol for castling rights: %c", c)
 				}
 			}
 		case 2:
 			if part == "-" {
 				continue
 			}
-			if len(part) < 2 {
-				return nil, fmt.Errorf("EnPassant square with wrong len: %s", part)
+			if len(part) != 2 {
+				return nil, fmt.Errorf("en passant square with wrong length: %s", part)
 			}
 			col := int(part[0] - 'a')
 			row := int(part[1] - '1')
-			if col < 0 || col > 7 || (row != 3 && row != 6) {
-				return nil, fmt.Errorf("Not an EnPassant square: %s", part)
+			if col < 0 || col > 7 || (row != 2 && row != 5) {
+				return nil, fmt.Errorf("not an en passant square: %s", part)
 			}
 			EnPassantSquare = ConvertRowColToIdx(row, col)
 		case 3:
@@ -143,7 +156,7 @@ func CreateBoard(fen string) (*Board, error) {
 			if err != nil {
 				return nil, err
 			} else if parseHalf < 0 {
-				return nil, fmt.Errorf("HalfmoveClock < 0")
+				return nil, fmt.Errorf("halfmove clock < 0")
 			}
 			HalfmoveClock = parseHalf
 		case 4:
@@ -151,7 +164,7 @@ func CreateBoard(fen string) (*Board, error) {
 			if err != nil {
 				return nil, err
 			} else if parseFull < 1 {
-				return nil, fmt.Errorf("Fullmove number < 1")
+				return nil, fmt.Errorf("fullmove number < 1")
 			}
 			FullmoveNumber = parseFull
 		}
@@ -173,12 +186,12 @@ func CreateBoard(fen string) (*Board, error) {
 func (b *Board) FEN() string {
 	var sb strings.Builder
 	pieceSymbolFromType := map[PieceId]rune{
-		King: 'k',
-		Pawn: 'p',
+		King:   'k',
+		Pawn:   'p',
 		Knight: 'n',
 		Bishop: 'b',
-		Rook: 'r',
-		Queen: 'q',
+		Rook:   'r',
+		Queen:  'q',
 	}
 	for row := 7; row >= 0; row-- {
 		empty := 0
@@ -186,19 +199,26 @@ func (b *Board) FEN() string {
 			piece := b.Square[ConvertRowColToIdx(row, col)]
 			if piece.IsEmpty() {
 				empty++
-			} else if empty > 0{
-				sb.WriteByte(byte('0' - empty))
+				continue
+			} else if empty > 0 {
+				sb.WriteByte(byte('0' + empty))
 				empty = 0
-				symbol := pieceSymbolFromType[piece.Type()]
-				if piece.Color() == White {
-					symbol = unicode.ToUpper(symbol)
-				}
-				sb.WriteRune(symbol)
 			}
+			symbol := pieceSymbolFromType[piece.Type()]
+			if piece.Color() == White {
+				symbol = unicode.ToUpper(symbol)
+			}
+			sb.WriteRune(symbol)
 		}
-		sb.WriteRune('/')
+		if empty > 0 {
+			sb.WriteByte(byte('0' + empty))
+			empty = 0
+		}
+		if row > 0 {
+			sb.WriteRune('/')
+		}
 	}
-	
+
 	sb.WriteRune(' ')
 	if b.ToMove == White {
 		sb.WriteRune('w')
@@ -208,19 +228,19 @@ func (b *Board) FEN() string {
 	sb.WriteRune(' ')
 
 	hasCastle := false
-	if b.CastlingRights & WhiteKing != 0 {
+	if b.CastlingRights&WhiteKing != 0 {
 		sb.WriteRune('K')
 		hasCastle = true
 	}
-	if b.CastlingRights & WhiteQueen != 0 {
+	if b.CastlingRights&WhiteQueen != 0 {
 		sb.WriteRune('Q')
 		hasCastle = true
 	}
-	if b.CastlingRights & BlackKing != 0 {
+	if b.CastlingRights&BlackKing != 0 {
 		sb.WriteRune('k')
 		hasCastle = true
 	}
-	if b.CastlingRights & BlackQueen != 0 {
+	if b.CastlingRights&BlackQueen != 0 {
 		sb.WriteRune('q')
 		hasCastle = true
 	}
