@@ -91,6 +91,36 @@ The rules, bot and match packages have no dependency on Ebitengine, so their tes
 
 Move generation is verified with [perft](https://www.chessprogramming.org/Perft_Results): the number of possible move sequences from seven standard positions is compared against the known results, up to about 4.8 million positions per test. Add `-short` to skip the deepest runs.
 
+## Benchmarks
+
+`internal/chess/bench_test.go` measures the engine's hot paths: move generation, legal move filtering, make/unmake, attack detection, perft and game result detection, each on several positions.
+
+```sh
+go test ./internal/chess/ -run '^$' -bench . -benchmem            # all benchmarks (about 30 seconds)
+go test ./internal/chess/ -run '^$' -bench Perft                  # only the perft benchmarks
+go test ./internal/chess/ -run '^$' -bench 'MakeUnmake/start'     # one benchmark, one position
+```
+
+`-run '^$'` skips the normal tests, `-bench` takes a pattern matching benchmark names, and `-benchmem` adds memory allocations per operation. In the output, `ns/op` is the time for one run (lower is better), `allocs/op` the number of memory allocations, and the perft benchmarks also report `nodes/s`, positions searched per second.
+
+### Comparing before and after a change
+
+Single runs vary a little, so measure several times and compare with [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat):
+
+```sh
+go install golang.org/x/perf/cmd/benchstat@latest
+mkdir -p benchmarks
+
+go test ./internal/chess/ -run '^$' -bench . -benchmem -count 6 | tee benchmarks/before.txt
+# ...change the engine...
+go test ./internal/chess/ -run '^$' -bench . -benchmem -count 6 | tee benchmarks/after.txt
+benchstat benchmarks/before.txt benchmarks/after.txt
+```
+
+The `benchmarks/` folder is in `.gitignore`, so results stay local.
+
+`-count 6` repeats every benchmark six times (about 3 minutes in total; add `-benchtime 300ms` for a quicker, slightly noisier run). `benchstat` shows the change for each benchmark as a percentage and marks differences too small to be meaningful with `~`.
+
 ## Project structure
 
 ```
