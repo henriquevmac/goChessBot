@@ -8,11 +8,11 @@ import (
 type BotType uint8
 
 var pieceValues = [7]int{
-	chess.Pawn: 100,
+	chess.Pawn:   100,
 	chess.Knight: 320,
 	chess.Bishop: 330,
-	chess.Rook: 500,
-	chess.Queen: 900,
+	chess.Rook:   500,
+	chess.Queen:  900,
 }
 
 const (
@@ -34,7 +34,7 @@ func (r randomBot) BestMove(b chess.Board) chess.Move {
 	return legalMoves[rand.IntN(len(legalMoves))]
 }
 
-type greedyBot struct {}
+type greedyBot struct{}
 
 func (g greedyBot) BestMove(b chess.Board) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)

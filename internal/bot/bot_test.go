@@ -13,7 +13,7 @@ import (
 // so they stay valid as bots are added or improved.
 
 // allBotTypes lists every bot the contract tests run against. Add new bot types here.
-var allBotTypes = []BotType{Random}
+var allBotTypes = []BotType{Random, Greedy}
 
 // forEachBot runs test once per bot type, as a subtest named after the type.
 func forEachBot(t *testing.T, test func(t *testing.T, bot Bot)) {
