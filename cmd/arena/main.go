@@ -23,6 +23,7 @@ type tally struct {
 
 var botTypes = map[string]bot.BotType{
 	"random": bot.Random,
+	"greedy": bot.Greedy,
 }
 
 func newBot(name string) (bot.Bot, error) {
