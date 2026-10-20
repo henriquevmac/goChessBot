@@ -7,14 +7,6 @@ import (
 
 type BotType uint8
 
-var pieceValues = [7]int{
-	chess.Pawn:   100,
-	chess.Knight: 320,
-	chess.Bishop: 330,
-	chess.Rook:   500,
-	chess.Queen:  900,
-}
-
 const (
 	Random BotType = iota
 	Greedy
@@ -47,13 +39,13 @@ func (g greedyBot) BestMove(b chess.Board) chess.Move {
 		if move.IsCapture() {
 			value := 0
 			if move.Flag() == chess.EnPassant {
-				value = pieceValues[chess.Pawn]
+				value = chess.PieceValues[chess.Pawn]
 				if materialWon < value {
 					materialWon = value
 					bestMove = move
 				}
 			} else {
-				value = pieceValues[b.Square[move.To()].Type()]
+				value = chess.PieceValues[b.Square[move.To()].Type()]
 				if materialWon < value {
 					materialWon = value
 					bestMove = move

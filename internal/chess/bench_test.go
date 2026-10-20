@@ -117,3 +117,15 @@ func BenchmarkResult(b *testing.B) {
 		})
 	}
 }
+
+// Evaluate runs at every position a search visits, so its cost per call matters.
+func BenchmarkEvaluate(b *testing.B) {
+	for _, pos := range benchPositions {
+		b.Run(pos.name, func(b *testing.B) {
+			board := benchBoard(b, pos.fen)
+			for b.Loop() {
+				board.Evaluate()
+			}
+		})
+	}
+}

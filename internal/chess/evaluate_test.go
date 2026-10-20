@@ -1,0 +1,181 @@
+package chess
+
+import (
+	"math/rand/v2"
+	"strings"
+	"sync"
+	"testing"
+	"unicode"
+)
+
+// These tests check properties every evaluation must have, not specific scores,
+// so they stay valid as Evaluate grows. Evaluate returns the score from the point
+// of view of the side to move.
+
+// mirrorFEN flips the board vertically and swaps the colors: White's pieces become
+// Black's on the mirrored squares, and the other side is to move. It is the same
+// position seen from the other side, so the side to move must get the same score.
+func mirrorFEN(t *testing.T, fen string) string {
+	t.Helper()
+	parts := strings.Fields(fen)
+	if len(parts) != 6 {
+		t.Fatalf("mirrorFEN needs a full FEN, got %q", fen)
+	}
+
+	swapCase := func(s string) string {
+		return strings.Map(func(r rune) rune {
+			if unicode.IsUpper(r) {
+				return unicode.ToLower(r)
+			}
+			return unicode.ToUpper(r)
+		}, s)
+	}
+
+	ranks := strings.Split(parts[0], "/")
+	for i, j := 0, len(ranks)-1; i < j; i, j = i+1, j-1 {
+		ranks[i], ranks[j] = ranks[j], ranks[i]
+	}
+	placement := swapCase(strings.Join(ranks, "/"))
+
+	side := "w"
+	if parts[1] == "w" {
+		side = "b"
+	}
+
+	castling := "-"
+	if parts[2] != "-" {
+		swapped := swapCase(parts[2])
+		castling = ""
+		for _, r := range "KQkq" {
+			if strings.ContainsRune(swapped, r) {
+				castling += string(r)
+			}
+		}
+	}
+
+	ep := parts[3]
+	if ep != "-" {
+		rank := map[byte]byte{'3': '6', '6': '3'}[ep[1]]
+		ep = string([]byte{ep[0], rank})
+	}
+
+	return strings.Join([]string{placement, side, castling, ep, parts[4], parts[5]}, " ")
+}
+
+// evalPositions returns a varied set of positions: the standard test positions,
+// plus positions reached by random play from them (fixed seed, so it is repeatable).
+func evalPositions(t *testing.T) []string {
+	t.Helper()
+	fens := []string{
+		startFEN,
+		"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+		"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+		"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+		"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+		"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+		"4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 2",
+		"8/4P3/8/8/8/8/8/k3K3 w - - 0 1",
+	}
+	rng := rand.New(rand.NewPCG(1, 2))
+	var out []string
+	for _, fen := range fens {
+		out = append(out, fen)
+		b := mustBoard(t, fen)
+		for ply := 0; ply < 40; ply++ {
+			moves := b.GenerateLegalMoves(nil)
+			if len(moves) == 0 {
+				break
+			}
+			b.MakeMove(moves[rng.IntN(len(moves))])
+			out = append(out, b.FEN())
+		}
+	}
+	return out
+}
+
+func TestMirrorFEN(t *testing.T) {
+	// Sanity check of the test helper itself.
+	got := mirrorFEN(t, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b Kq e3 0 1")
+	want := "rnbqkbnr/pppp1ppp/8/4p3/8/8/PPPPPPPP/RNBQKBNR w Qk e6 0 1"
+	if got != want {
+		t.Errorf("mirrorFEN =\n  %q\nwant\n  %q", got, want)
+	}
+}
+
+// The same position seen from the other side must get the same score for the side to move.
+func TestEvaluateColorSymmetry(t *testing.T) {
+	for _, fen := range evalPositions(t) {
+		mirrored := mirrorFEN(t, fen)
+		a, b := mustBoard(t, fen), mustBoard(t, mirrored)
+		if ea, eb := a.Evaluate(), b.Evaluate(); ea != eb {
+			t.Errorf("Evaluate differs between a position and its mirror image:\n  %s  → %d\n  %s  → %d",
+				fen, ea, mirrored, eb)
+		}
+	}
+}
+
+// A side that is far ahead must see a positive score, and its opponent a negative one.
+func TestEvaluateSideToMove(t *testing.T) {
+	tests := []struct {
+		name string
+		fen  string
+		want int // +1: the side to move is far ahead, -1: far behind
+	}{
+		{"white far ahead, white to move", "4k3/8/8/8/8/8/PPPPPPPP/RN1QK1NR w - - 0 1", +1},
+		{"white far ahead, black to move", "4k3/8/8/8/8/8/PPPPPPPP/RN1QK1NR b - - 0 1", -1},
+		{"black far ahead, black to move", "rn1qk1nr/pppppppp/8/8/8/8/8/4K3 b - - 0 1", +1},
+		{"black far ahead, white to move", "rn1qk1nr/pppppppp/8/8/8/8/8/4K3 w - - 0 1", -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := mustBoard(t, tt.fen).Evaluate()
+			if (tt.want > 0 && got <= 0) || (tt.want < 0 && got >= 0) {
+				sign := "positive"
+				if tt.want < 0 {
+					sign = "negative"
+				}
+				t.Errorf("Evaluate(%q) = %d, want %s", tt.fen, got, sign)
+			}
+		})
+	}
+}
+
+func TestEvaluateDoesNotChangeBoard(t *testing.T) {
+	for _, fen := range evalPositions(t) {
+		b := mustBoard(t, fen)
+		before := *b
+		b.Evaluate()
+		if diff := boardDiff(b, &before); diff != "" {
+			t.Errorf("%s: Evaluate changed the board:\n  %s", fen, diff)
+		}
+	}
+}
+
+// Bots evaluate positions in several goroutines at once (parallel games, a search
+// split over cores). Run with -race to check this.
+func TestEvaluateConcurrent(t *testing.T) {
+	positions := evalPositions(t)
+	want := make([]int, len(positions))
+	for i, fen := range positions {
+		want[i] = mustBoard(t, fen).Evaluate()
+	}
+
+	var wg sync.WaitGroup
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i, fen := range positions {
+				b, err := CreateBoard(fen)
+				if err != nil {
+					t.Errorf("CreateBoard(%q): %v", fen, err)
+					return
+				}
+				if got := b.Evaluate(); got != want[i] {
+					t.Errorf("%s: concurrent Evaluate = %d, want %d", fen, got, want[i])
+				}
+			}
+		}()
+	}
+	wg.Wait()
+}
