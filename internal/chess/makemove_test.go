@@ -32,6 +32,10 @@ func boardDiff(got, want *Board) string {
 	if got.KingPos != want.KingPos {
 		diffs = append(diffs, fmt.Sprintf("KingPos [white, black]: got %v, want %v", got.KingPos, want.KingPos))
 	}
+	// Counts[Empty] is not kept up to date, so only the piece counts are compared.
+	if diff := describeCounts(got.Counts, want.Counts); diff != "" {
+		diffs = append(diffs, "Counts:"+diff)
+	}
 	return strings.Join(diffs, "\n  ")
 }
 

@@ -21,6 +21,7 @@ func (b *Board) MakeMove(m Move) Undo {
 		undoRecord.captured = b.Square[m.To()]
 		if !(m.Flag() == EnPassant) {
 			b.Hash ^= zobristPiece[undoRecord.captured][m.To()]
+			b.Counts[undoRecord.captured]--
 		}
 	}
 
@@ -29,11 +30,14 @@ func (b *Board) MakeMove(m Move) Undo {
 
 	if m.IsPromotion() {
 		piece = m.GetPromotion() | color
+		b.Counts[piece]++
+		b.Counts[Pawn|color]--
 	}
 
 	if m.Flag() == EnPassant {
 		idx := m.To() - pawnInfo[colorConversion(color)].forward
 		undoRecord.captured = b.Square[idx]
+		b.Counts[undoRecord.captured]--
 		b.Hash ^= zobristPiece[b.Square[idx]][idx]
 		b.Square[idx] = Empty
 	}
@@ -101,8 +105,14 @@ func (b *Board) UnmakeMove(m Move, u Undo) {
 	piece := b.Square[m.To()]
 	capturedPiece := u.captured
 
+	if m.IsCapture() {
+		b.Counts[capturedPiece]++
+	}
+
 	if m.IsPromotion() {
 		piece = Pawn | b.ToMove
+		b.Counts[m.GetPromotion()|b.ToMove]--
+		b.Counts[piece]++
 	}
 
 	b.HalfmoveClock = u.halfmoveClock

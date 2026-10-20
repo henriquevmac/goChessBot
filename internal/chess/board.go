@@ -27,6 +27,7 @@ type Board struct {
 	FullmoveNumber  int
 	KingPos         [2]int
 	Hash            uint64
+	Counts          [32]uint8
 }
 
 func ConvertRowColToIdx(row int, col int) int {
@@ -178,8 +179,10 @@ func CreateBoard(fen string) (*Board, error) {
 		FullmoveNumber,
 		KingPos,
 		0,
+		[32]uint8{},
 	}
 	board.Hash = board.computeHash()
+	board.Counts = board.getCounts()
 	return board, nil
 }
 
@@ -261,4 +264,12 @@ func (b *Board) FEN() string {
 	sb.WriteString(strconv.Itoa(b.FullmoveNumber))
 
 	return sb.String()
+}
+
+func (b *Board) getCounts() [32]uint8 {
+	var counts [32]uint8
+	for _, p := range b.Square {
+		counts[p]++
+	}
+	return counts
 }
