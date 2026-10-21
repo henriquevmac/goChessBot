@@ -27,6 +27,7 @@ func (s *searcher) quiesce(alpha, beta int) int {
 	}
 
 	captures := s.board.GenerateCaptureMoves(nil)
+	// orderMoves(s.board, captures)
 	for _, move := range captures {
 		u := s.board.MakeMove(move)
 		score := -s.quiesce(-beta, -alpha)
