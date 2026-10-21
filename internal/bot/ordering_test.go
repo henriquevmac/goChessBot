@@ -31,7 +31,7 @@ func ordered(t *testing.T, fen string) (*chess.Board, []chess.Move) {
 	t.Helper()
 	b := mustBoard(t, fen)
 	moves := b.GenerateLegalMoves(nil)
-	orderMoves(b, moves)
+	orderMoves(b, moves, chess.Move(0))
 	return b, moves
 }
 
@@ -53,7 +53,7 @@ func TestOrderMovesIsAPermutation(t *testing.T) {
 		original := b.GenerateLegalMoves(nil)
 		moves := slices.Clone(original)
 		before := *b
-		orderMoves(b, moves)
+		orderMoves(b, moves, chess.Move(0))
 
 		want, got := slices.Clone(original), slices.Clone(moves)
 		slices.Sort(want)
@@ -72,7 +72,7 @@ func TestOrderMovesWorksOnASubset(t *testing.T) {
 	b := mustBoard(t, orderingFENs[1])
 	captures := b.GenerateCaptureMoves(nil)
 	moves := slices.Clone(captures)
-	orderMoves(b, moves)
+	orderMoves(b, moves, chess.Move(0))
 	want, got := slices.Clone(captures), slices.Clone(moves)
 	slices.Sort(want)
 	slices.Sort(got)
@@ -189,7 +189,7 @@ func TestAlphaBetaScoreMatchesNegamax(t *testing.T) {
 		for depth := 1; depth <= c.maxDepth; depth++ {
 			b := mustBoard(t, fen)
 			want := referenceScore(&searcher{board: b}, depth)
-			got := (&searcher{board: b}).alphaBeta(-infinite, infinite, depth)
+			got := testSearcher(b).alphaBeta(-infinite, infinite, depth)
 			if got != want {
 				t.Errorf("%s, depth %d: alphaBeta = %d, full negamax = %d", fen, depth, got, want)
 			}
@@ -218,9 +218,13 @@ func BenchmarkAlphaBeta(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
+				// A fresh table for every search, as BestMove creates one per move;
+				// allocating it is not part of the measured time.
 				nodes := 0
-				for b.Loop() {
-					s := searcher{board: board}
+				for i := 0; i < b.N; i++ {
+					b.StopTimer()
+					s := testSearcher(board)
+					b.StartTimer()
 					s.alphaBeta(-infinite, infinite, depth)
 					nodes = s.nodes
 				}

@@ -20,7 +20,28 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	if depth == 0 {
 		return s.quiesce(alpha, beta)
 	}
+	alphaOrig := alpha
+	entry, found := s.tt.probe(s.board.Hash)
+	ttBestMove := chess.Move(0)
+	if found {
+		if entry.depth >= depth {
+			switch entry.flag {
+			case ttExact:
+				return entry.score
+			case ttLower:
+				if entry.score >= beta {
+					return entry.score
+				}
+			case ttUpper:
+				if entry.score <= alpha {
+					return entry.score
+				}
+			}
+		}
+		ttBestMove = entry.bestMove
+	}
 	bestValue := -infinite
+	bestMove := chess.Move(0)
 	legalMoves := s.board.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		if s.board.InCheck() {
@@ -29,20 +50,30 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 			return 0
 		}
 	}
-	orderMoves(s.board, legalMoves)
+	orderMoves(s.board, legalMoves, ttBestMove)
 	for _, move := range legalMoves {
 		u := s.board.MakeMove(move)
 		score := -s.alphaBeta(-beta, -alpha, depth-1)
 		s.board.UnmakeMove(move, u)
 		if score > bestValue {
 			bestValue = score
+			bestMove = move
 			if score > alpha {
 				alpha = score
 			}
 		}
 		if score >= beta {
-			return score
+			break
 		}
+	}
+	if !s.stopped {
+		flag := ttExact
+		if bestValue <= alphaOrig {
+			flag = ttUpper
+		} else if bestValue >= beta {
+			flag = ttLower
+		}
+		s.tt.store(ttEntry{key: s.board.Hash, bestMove: bestMove, depth: depth, score: bestValue, flag: flag})
 	}
 	return bestValue
 }
@@ -72,8 +103,9 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		deadline: deadline,
 		nodes:    0,
 		stopped:  false,
+		tt:       newTranspositionTable(18),
 	}
-	orderMoves(s.board, legalMoves)
+	orderMoves(s.board, legalMoves, chess.Move(0))
 	for depth := 1; depth <= maxDepth; depth++ {
 		maxScore := -infinite
 		depthBest := bestMove

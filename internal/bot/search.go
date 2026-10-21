@@ -10,6 +10,7 @@ type searcher struct {
 	deadline time.Time
 	nodes    int
 	stopped  bool
+	tt       *transpositionTable
 }
 
 func (s *searcher) quiesce(alpha, beta int) int {
@@ -27,7 +28,7 @@ func (s *searcher) quiesce(alpha, beta int) int {
 	}
 
 	captures := s.board.GenerateCaptureMoves(nil)
-	orderMoves(s.board, captures)
+	orderMoves(s.board, captures, chess.Move(0))
 	for _, move := range captures {
 		u := s.board.MakeMove(move)
 		score := -s.quiesce(-beta, -alpha)

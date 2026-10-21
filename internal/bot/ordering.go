@@ -8,6 +8,7 @@ const (
 	kingOrderValue = 1_000
 	captureBase    = 10_000
 	promotionBase  = 20_000
+	ttMoveScore    = 1_000_000
 )
 
 func scoreMove(b *chess.Board, m chess.Move) int {
@@ -30,10 +31,14 @@ func scoreMove(b *chess.Board, m chess.Move) int {
 	return score
 }
 
-func orderMoves(b *chess.Board, moves []chess.Move) {
+func orderMoves(b *chess.Board, moves []chess.Move, ttMove chess.Move) {
 	var scores [256]int
 	for idx, move := range moves {
-		scores[idx] = scoreMove(b, move)
+		if move == ttMove {
+			scores[idx] = ttMoveScore
+		} else {
+			scores[idx] = scoreMove(b, move)
+		}
 	}
 	for i := 1; i < len(moves); i++ {
 		m, s := moves[i], scores[i]
