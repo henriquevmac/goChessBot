@@ -29,7 +29,7 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 			return 0
 		}
 	}
-	// orderMoves(s.board, legalMoves)
+	orderMoves(s.board, legalMoves)
 	for _, move := range legalMoves {
 		u := s.board.MakeMove(move)
 		score := -s.alphaBeta(-beta, -alpha, depth-1)
@@ -73,7 +73,7 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		nodes:    0,
 		stopped:  false,
 	}
-	// orderMoves(s.board, legalMoves)
+	orderMoves(s.board, legalMoves)
 	for depth := 1; depth <= maxDepth; depth++ {
 		maxScore := -infinite
 		depthBest := bestMove
