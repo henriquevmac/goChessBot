@@ -36,6 +36,7 @@ type Game struct {
 	History            []uint64
 	Bot                bot.Bot
 	BotColor           chess.PieceId
+	BotDepth           int
 	thinking           bool
 	botMoves           chan chess.Move
 }
@@ -53,6 +54,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		History:            []uint64{},
 		Bot:                bot.New(bot.Random),
 		BotColor:           chess.Black,
+		BotDepth:           3,
 		thinking:           false,
 		botMoves:           make(chan chess.Move, 1),
 	}
@@ -98,7 +100,8 @@ func (g *Game) Update() error {
 			boardCopy := *g.Board
 			ch := g.botMoves
 			b := g.Bot
-			go func() { ch <- b.BestMove(boardCopy) }()
+			depth := g.BotDepth
+			go func() { ch <- b.BestMove(boardCopy, depth) }()
 		} else {
 			select {
 			case m := <-g.botMoves:

@@ -13,7 +13,11 @@ import (
 // so they stay valid as bots are added or improved.
 
 // allBotTypes lists every bot the contract tests run against. Add new bot types here.
-var allBotTypes = []BotType{Random, Greedy}
+var allBotTypes = []BotType{Random, Greedy, NegaMax}
+
+// testDepth is the search depth the contract tests pass to BestMove. It is kept low
+// so the full self-play game stays fast; the contract does not depend on depth.
+const testDepth = 2
 
 // forEachBot runs test once per bot type, as a subtest named after the type.
 func forEachBot(t *testing.T, test func(t *testing.T, bot Bot)) {
@@ -56,7 +60,7 @@ func TestBestMoveIsLegal(t *testing.T) {
 			legal := b.GenerateLegalMoves(nil)
 			before := *b
 
-			m := bot.BestMove(*b)
+			m := bot.BestMove(*b, testDepth)
 
 			if !slices.Contains(legal, m) {
 				t.Errorf("%s: BestMove returned %s, which is not a legal move", fen, m)
@@ -77,7 +81,7 @@ func TestBestMoveForcedMove(t *testing.T) {
 		if len(legal) != 1 {
 			t.Fatalf("test position should have exactly 1 legal move, has %d", len(legal))
 		}
-		if m := bot.BestMove(*b); m != legal[0] {
+		if m := bot.BestMove(*b, testDepth); m != legal[0] {
 			t.Errorf("BestMove = %s, want the only legal move %s", m, legal[0])
 		}
 	})
@@ -94,7 +98,7 @@ func TestBestMoveNoLegalMoves(t *testing.T) {
 	forEachBot(t, func(t *testing.T, bot Bot) {
 		for _, pos := range positions {
 			b := mustBoard(t, pos.fen)
-			if m := bot.BestMove(*b); m != chess.Move(0) {
+			if m := bot.BestMove(*b, testDepth); m != chess.Move(0) {
 				t.Errorf("%s: BestMove = %s, want chess.Move(0) when there are no legal moves", pos.name, m)
 			}
 		}
@@ -112,7 +116,7 @@ func TestBestMoveConcurrent(t *testing.T) {
 			wg.Add(1)
 			go func(board chess.Board) {
 				defer wg.Done()
-				m := bot.BestMove(board)
+				m := bot.BestMove(board, testDepth)
 				if !slices.Contains(legal, m) {
 					t.Errorf("%s: concurrent BestMove returned illegal move %s", fen, m)
 				}
@@ -143,7 +147,7 @@ func TestBotPlaysAGame(t *testing.T) {
 				return
 			}
 
-			m := bot.BestMove(*b)
+			m := bot.BestMove(*b, testDepth)
 			if !slices.Contains(legal, m) {
 				t.Fatalf("ply %d: BestMove returned illegal move %s", ply, m)
 			}

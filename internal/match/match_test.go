@@ -15,7 +15,7 @@ type scriptedBot struct {
 	next  int
 }
 
-func (s *scriptedBot) BestMove(b chess.Board) chess.Move {
+func (s *scriptedBot) BestMove(b chess.Board, depth int) chess.Move {
 	if s.next >= len(s.moves) {
 		return chess.Move(0)
 	}
@@ -36,7 +36,7 @@ func script(moves ...string) *scriptedBot {
 // illegalBot always returns a move that is never legal.
 type illegalBot struct{}
 
-func (illegalBot) BestMove(b chess.Board) chess.Move { return chess.Move(0) }
+func (illegalBot) BestMove(b chess.Board, depth int) chess.Move { return chess.Move(0) }
 
 func uciList(moves []chess.Move) []string {
 	out := make([]string, len(moves))
@@ -48,7 +48,7 @@ func uciList(moves []chess.Move) []string {
 
 func mustPlay(t *testing.T, white, black bot.Bot, fen string, maxPlies int) Game {
 	t.Helper()
-	g, err := Play(white, black, fen, maxPlies)
+	g, err := Play(white, black, fen, maxPlies, 1)
 	if err != nil {
 		t.Fatalf("Play(%q): unexpected error %v", fen, err)
 	}
@@ -150,7 +150,7 @@ func TestPlayStartingPositions(t *testing.T) {
 		checkGame(t, g, []string{"e2e4"}, chess.Ongoing, 0, false)
 	})
 	t.Run("invalid FEN returns an error", func(t *testing.T) {
-		if _, err := Play(illegalBot{}, illegalBot{}, "8/8/8/8/8/8/8/8 w - - x 1", 100); err == nil {
+		if _, err := Play(illegalBot{}, illegalBot{}, "8/8/8/8/8/8/8/8 w - - x 1", 100, 1); err == nil {
 			t.Errorf("Play with an unparsable FEN returned no error")
 		}
 	})

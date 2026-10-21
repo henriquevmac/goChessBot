@@ -10,15 +10,16 @@ type BotType uint8
 const (
 	Random BotType = iota
 	Greedy
+	NegaMax
 )
 
 type Bot interface {
-	BestMove(b chess.Board) chess.Move
+	BestMove(b chess.Board, depth int) chess.Move
 }
 
 type randomBot struct{}
 
-func (r randomBot) BestMove(b chess.Board) chess.Move {
+func (r randomBot) BestMove(b chess.Board, depth int) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
@@ -28,7 +29,7 @@ func (r randomBot) BestMove(b chess.Board) chess.Move {
 
 type greedyBot struct{}
 
-func (g greedyBot) BestMove(b chess.Board) chess.Move {
+func (g greedyBot) BestMove(b chess.Board, depth int) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
@@ -65,6 +66,8 @@ func New(bt BotType) Bot {
 		return randomBot{}
 	case Greedy:
 		return greedyBot{}
+	case NegaMax:
+		return negaMaxBot{}
 	default:
 		return nil
 	}

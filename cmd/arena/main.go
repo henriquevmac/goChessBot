@@ -23,8 +23,9 @@ type tally struct {
 }
 
 var botTypes = map[string]bot.BotType{
-	"random": bot.Random,
-	"greedy": bot.Greedy,
+	"random":  bot.Random,
+	"greedy":  bot.Greedy,
+	"negaMax": bot.NegaMax,
 }
 
 func newBot(name string) (bot.Bot, error) {
@@ -42,14 +43,14 @@ type finishedGame struct {
 	elapsed  time.Duration
 }
 
-func playGame(i int, a, b bot.Bot, fen string, maxPlies, adjudicate int) finishedGame {
+func playGame(i int, a, b bot.Bot, fen string, maxPlies, depth, adjudicate int) finishedGame {
 	aIsWhite := i%2 == 0
 	white, black := a, b
 	if !aIsWhite {
 		white, black = b, a
 	}
 	start := time.Now()
-	g, err := match.Play(white, black, fen, maxPlies)
+	g, err := match.Play(white, black, fen, maxPlies, depth)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -171,6 +172,7 @@ func main() {
 	workers := flag.Int("workers", runtime.NumCPU(), "number of games played at the same time")
 	openingsFile := flag.String("openings", "", "file with one FEN per line; each opening is played twice, colors swapped")
 	adjudicate := flag.Int("adjudicate", 0, "decide games that hit the move limit by material: a lead of at least this many centipawns wins, less is a draw (0 = off)")
+	depth := flag.Int("depth", 4, "search depth passed to both bots")
 	flag.Parse()
 
 	set := map[string]bool{}
@@ -211,7 +213,7 @@ func main() {
 	nameA := *botA + " (A)"
 	nameB := *botB + " (B)"
 
-	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, %d workers\n", nameA, nameB, *games, *maxPlies, *workers)
+	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, depth %d, %d workers\n", nameA, nameB, *games, *maxPlies, *depth, *workers)
 	if *openingsFile != "" {
 		fmt.Printf("openings: %s (%d positions)\n", *openingsFile, len(starts))
 	}
@@ -231,7 +233,7 @@ func main() {
 	for w := 0; w < *workers; w++ {
 		go func() {
 			for i := range jobs {
-				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, *adjudicate)
+				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, *depth, *adjudicate)
 			}
 		}()
 	}
