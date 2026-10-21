@@ -16,8 +16,9 @@ const (
 )
 
 type Limits struct {
-	Depth int
-	Time  time.Duration
+	Depth   int
+	Time    time.Duration
+	History []uint64
 }
 
 type Bot interface {

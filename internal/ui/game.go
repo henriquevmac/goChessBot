@@ -102,6 +102,7 @@ func (g *Game) Update() error {
 			ch := g.botMoves
 			b := g.Bot
 			limits := g.BotLimits
+			limits.History = slices.Clone(g.History) // the UI keeps appending to its own
 			go func() { ch <- b.BestMove(boardCopy, limits) }()
 		} else {
 			select {

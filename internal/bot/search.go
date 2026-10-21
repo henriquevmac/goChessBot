@@ -11,6 +11,7 @@ type searcher struct {
 	nodes    int
 	stopped  bool
 	tt       *transpositionTable
+	history  []uint64
 }
 
 func (s *searcher) quiesce(alpha, beta int) int {

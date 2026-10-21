@@ -157,3 +157,69 @@ func TestBotPlaysAGame(t *testing.T) {
 		t.Logf("no result after 200 plies (fine for a weak bot)")
 	})
 }
+
+// gameWithHistory plays moves from the start and returns the board plus the history
+// of earlier position hashes, exactly as match.Play and the UI build it.
+func gameWithHistory(t *testing.T, moves ...string) (*chess.Board, []uint64) {
+	t.Helper()
+	b := mustBoard(t, contractFENs[0])
+	var history []uint64
+	for _, uci := range moves {
+		var found chess.Move
+		for _, m := range b.GenerateLegalMoves(nil) {
+			if m.String() == uci {
+				found = m
+			}
+		}
+		if found == 0 {
+			t.Fatalf("setup: %s is not legal", uci)
+		}
+		history = append(history, b.Hash)
+		b.MakeMove(found)
+	}
+	return b, history
+}
+
+// With a game history, every bot must still return a legal move, including when
+// the current position has already occurred before.
+func TestBestMoveWithHistory(t *testing.T) {
+	forEachBot(t, func(t *testing.T, bot Bot) {
+		// The knights go out and back: the start position is on the board for the second time.
+		b, history := gameWithHistory(t, "g1f3", "g8f6", "f3g1", "f6g8")
+		legal := b.GenerateLegalMoves(nil)
+		l := testLimits
+		l.History = history
+		if m := bot.BestMove(*b, l); !slices.Contains(legal, m) {
+			t.Errorf("BestMove with a history returned %s, which is not a legal move", m)
+		}
+	})
+}
+
+// The history belongs to the caller. A bot must not change it, not even the spare
+// capacity behind it, where an append from the bot would silently write.
+func TestBestMoveDoesNotModifyHistory(t *testing.T) {
+	forEachBot(t, func(t *testing.T, bot Bot) {
+		b, history := gameWithHistory(t, "e2e4", "e7e5", "g1f3", "b8c6")
+		const sentinel = 0xDEADBEEFDEADBEEF
+		backing := make([]uint64, len(history), len(history)+64)
+		copy(backing, history)
+		for i := len(history); i < cap(backing); i++ {
+			backing[:cap(backing)][i] = sentinel
+		}
+		before := slices.Clone(backing)
+
+		l := testLimits
+		l.History = backing
+		bot.BestMove(*b, l)
+
+		if !slices.Equal(backing, before) {
+			t.Errorf("BestMove changed the history: got %x, want %x", backing, before)
+		}
+		for i, v := range backing[len(backing):cap(backing)] {
+			if v != sentinel {
+				t.Errorf("BestMove wrote into the history's spare capacity at index %d", len(backing)+i)
+				break
+			}
+		}
+	})
+}

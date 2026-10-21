@@ -17,6 +17,12 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	if s.check() {
 		return 0
 	}
+	stop := max(len(s.history)-s.board.HalfmoveClock, 0)
+	for i := len(s.history) - 2; i >= stop; i -= 2 {
+		if s.history[i] == s.board.Hash {
+			return 0
+		}
+	}
 	if depth == 0 {
 		return s.quiesce(alpha, beta)
 	}
@@ -52,8 +58,10 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	}
 	orderMoves(s.board, legalMoves, ttBestMove)
 	for _, move := range legalMoves {
+		s.history = append(s.history, s.board.Hash)
 		u := s.board.MakeMove(move)
 		score := -s.alphaBeta(-beta, -alpha, depth-1)
+		s.history = s.history[:len(s.history)-1]
 		s.board.UnmakeMove(move, u)
 		if score > bestValue {
 			bestValue = score
@@ -104,14 +112,17 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		nodes:    0,
 		stopped:  false,
 		tt:       newTranspositionTable(18),
+		history:  slices.Clone(limits.History),
 	}
 	orderMoves(s.board, legalMoves, chess.Move(0))
 	for depth := 1; depth <= maxDepth; depth++ {
 		maxScore := -infinite
 		depthBest := bestMove
 		for _, move := range legalMoves {
+			s.history = append(s.history, s.board.Hash)
 			u := b.MakeMove(move)
 			score := -s.alphaBeta(-infinite, -maxScore, depth-1)
+			s.history = s.history[:len(s.history)-1]
 			b.UnmakeMove(move, u)
 			if score > maxScore {
 				maxScore = score

@@ -40,7 +40,7 @@ func getCurrentGameState(board *chess.Board, legalMoves, moves []chess.Move, his
 }
 
 // Play runs one game between two bots, starting from fen ("" means the start position).
-// limits is passed to both bots' BestMove.
+// limits is passed to both bots' BestMove, with History set to the game so far.
 func Play(white, black bot.Bot, fen string, maxPlies int, limits bot.Limits) (Game, error) {
 	board, err := chess.CreateBoard(fen)
 	if err != nil {
@@ -53,6 +53,7 @@ func Play(white, black bot.Bot, fen string, maxPlies int, limits bot.Limits) (Ga
 		if g, over := getCurrentGameState(board, legalMoves, moves, history); over {
 			return g, nil
 		}
+		limits.History = history
 		move := chess.Move(0)
 		switch board.ToMove {
 		case chess.White:

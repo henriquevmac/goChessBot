@@ -22,7 +22,7 @@ func (nM negaMaxBot) negaMax(b *chess.Board, limits Limits) int {
 	}
 	for _, move := range legalMoves {
 		u := b.MakeMove(move)
-		score := -nM.negaMax(b, Limits{limits.Depth - 1, limits.Time})
+		score := -nM.negaMax(b, Limits{Depth: limits.Depth - 1, Time: limits.Time})
 		b.UnmakeMove(move, u)
 		if score > maxScore {
 			maxScore = score
@@ -44,7 +44,7 @@ func (nM negaMaxBot) BestMove(b chess.Board, limits Limits) chess.Move {
 	}
 	for _, move := range legalMoves {
 		u := b.MakeMove(move)
-		score := -nM.negaMax(&b, Limits{depth - 1, limits.Time})
+		score := -nM.negaMax(&b, Limits{Depth: depth - 1, Time: limits.Time})
 		b.UnmakeMove(move, u)
 		if score > maxScore {
 			maxScore = score
