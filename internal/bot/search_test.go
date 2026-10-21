@@ -11,7 +11,7 @@ import (
 // moves it picks, so they stay valid as the search and evaluation change.
 
 // searchBots lists the bots these tests run against. Add new searching bots here.
-var searchBots = []BotType{NegaMax}
+var searchBots = []BotType{NegaMax, AlphaBeta}
 
 func forEachSearchBot(t *testing.T, test func(t *testing.T, bot Bot)) {
 	t.Helper()

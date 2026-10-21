@@ -16,6 +16,25 @@ func (b *Board) GenerateLegalMoves(moves []Move) []Move {
 	return pseudo[:n]
 }
 
+func (b *Board) GenerateCaptureMoves(moves []Move) []Move {
+	pseudo := b.GenerateMoves(moves)
+	start := len(moves)
+	n := start
+	for _, move := range pseudo[start:] {
+		if !move.IsCapture() {
+			continue
+		}
+		u := b.MakeMove(move)
+		oppColor := b.ToMove.OppositeColor()
+		if !b.IsSquareAttacked(b.KingPos[colorConversion(oppColor)], b.ToMove) {
+			pseudo[n] = move
+			n++
+		}
+		b.UnmakeMove(move, u)
+	}
+	return pseudo[:n]
+}
+
 func (b *Board) Perft(depth int) int {
 	if depth == 0 {
 		return 1

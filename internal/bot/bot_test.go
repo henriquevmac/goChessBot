@@ -13,7 +13,7 @@ import (
 // so they stay valid as bots are added or improved.
 
 // allBotTypes lists every bot the contract tests run against. Add new bot types here.
-var allBotTypes = []BotType{Random, Greedy, NegaMax}
+var allBotTypes = []BotType{Random, Greedy, NegaMax, AlphaBeta}
 
 // testDepth is the search depth the contract tests pass to BestMove. It is kept low
 // so the full self-play game stays fast; the contract does not depend on depth.

@@ -11,6 +11,7 @@ const (
 	Random BotType = iota
 	Greedy
 	NegaMax
+	AlphaBeta
 )
 
 type Bot interface {
@@ -68,6 +69,8 @@ func New(bt BotType) Bot {
 		return greedyBot{}
 	case NegaMax:
 		return negaMaxBot{}
+	case AlphaBeta:
+		return alphaBetaBot{}
 	default:
 		return nil
 	}

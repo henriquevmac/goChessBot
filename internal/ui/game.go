@@ -52,7 +52,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		LegalMoves:         legalMoves,
 		Result:             board.ResultWithMoves(legalMoves),
 		History:            []uint64{},
-		Bot:                bot.New(bot.Random),
+		Bot:                bot.New(bot.NegaMax),
 		BotColor:           chess.Black,
 		BotDepth:           3,
 		thinking:           false,
