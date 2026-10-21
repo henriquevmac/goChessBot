@@ -7,8 +7,8 @@ import (
 
 type negaMaxBot struct{}
 
-func (nM negaMaxBot) negaMax(b *chess.Board, depth int) int {
-	if depth == 0 {
+func (nM negaMaxBot) negaMax(b *chess.Board, limits Limits) int {
+	if limits.Depth == 0 {
 		return b.Evaluate()
 	}
 	maxScore := -math.MaxInt
@@ -22,7 +22,7 @@ func (nM negaMaxBot) negaMax(b *chess.Board, depth int) int {
 	}
 	for _, move := range legalMoves {
 		u := b.MakeMove(move)
-		score := -nM.negaMax(b, depth-1)
+		score := -nM.negaMax(b, Limits{limits.Depth - 1, limits.Time})
 		b.UnmakeMove(move, u)
 		if score > maxScore {
 			maxScore = score
@@ -31,16 +31,20 @@ func (nM negaMaxBot) negaMax(b *chess.Board, depth int) int {
 	return maxScore
 }
 
-func (nM negaMaxBot) BestMove(b chess.Board, depth int) chess.Move {
+func (nM negaMaxBot) BestMove(b chess.Board, limits Limits) chess.Move {
 	maxScore := -math.MaxInt
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
 	}
 	bestMove := legalMoves[0]
+	depth := limits.Depth
+	if depth == 0 {
+		depth = 1
+	}
 	for _, move := range legalMoves {
 		u := b.MakeMove(move)
-		score := -nM.negaMax(&b, depth-1)
+		score := -nM.negaMax(&b, Limits{depth - 1, limits.Time})
 		b.UnmakeMove(move, u)
 		if score > maxScore {
 			maxScore = score

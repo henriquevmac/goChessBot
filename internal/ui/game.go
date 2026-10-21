@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"log"
 	"slices"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -36,7 +37,7 @@ type Game struct {
 	History            []uint64
 	Bot                bot.Bot
 	BotColor           chess.PieceId
-	BotDepth           int
+	BotLimits          bot.Limits
 	thinking           bool
 	botMoves           chan chess.Move
 }
@@ -54,7 +55,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		History:            []uint64{},
 		Bot:                bot.New(bot.NegaMax),
 		BotColor:           chess.Black,
-		BotDepth:           3,
+		BotLimits:          bot.Limits{Depth: 6, Time: time.Second},
 		thinking:           false,
 		botMoves:           make(chan chess.Move, 1),
 	}
@@ -100,8 +101,8 @@ func (g *Game) Update() error {
 			boardCopy := *g.Board
 			ch := g.botMoves
 			b := g.Bot
-			depth := g.BotDepth
-			go func() { ch <- b.BestMove(boardCopy, depth) }()
+			limits := g.BotLimits
+			go func() { ch <- b.BestMove(boardCopy, limits) }()
 		} else {
 			select {
 			case m := <-g.botMoves:

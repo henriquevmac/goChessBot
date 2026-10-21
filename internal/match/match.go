@@ -40,8 +40,8 @@ func getCurrentGameState(board *chess.Board, legalMoves, moves []chess.Move, his
 }
 
 // Play runs one game between two bots, starting from fen ("" means the start position).
-// depth is passed to both bots' BestMove.
-func Play(white, black bot.Bot, fen string, maxPlies, depth int) (Game, error) {
+// limits is passed to both bots' BestMove.
+func Play(white, black bot.Bot, fen string, maxPlies int, limits bot.Limits) (Game, error) {
 	board, err := chess.CreateBoard(fen)
 	if err != nil {
 		return Game{}, err
@@ -56,9 +56,9 @@ func Play(white, black bot.Bot, fen string, maxPlies, depth int) (Game, error) {
 		move := chess.Move(0)
 		switch board.ToMove {
 		case chess.White:
-			move = white.BestMove(*board, depth)
+			move = white.BestMove(*board, limits)
 		case chess.Black:
-			move = black.BestMove(*board, depth)
+			move = black.BestMove(*board, limits)
 		default:
 			return Game{}, nil
 		}

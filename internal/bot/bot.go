@@ -3,6 +3,7 @@ package bot
 import (
 	"goChessBot/internal/chess"
 	"math/rand/v2"
+	"time"
 )
 
 type BotType uint8
@@ -14,13 +15,18 @@ const (
 	AlphaBeta
 )
 
+type Limits struct {
+	Depth int
+	Time  time.Duration
+}
+
 type Bot interface {
-	BestMove(b chess.Board, depth int) chess.Move
+	BestMove(b chess.Board, l Limits) chess.Move
 }
 
 type randomBot struct{}
 
-func (r randomBot) BestMove(b chess.Board, depth int) chess.Move {
+func (r randomBot) BestMove(b chess.Board, l Limits) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
@@ -30,7 +36,7 @@ func (r randomBot) BestMove(b chess.Board, depth int) chess.Move {
 
 type greedyBot struct{}
 
-func (g greedyBot) BestMove(b chess.Board, depth int) chess.Move {
+func (g greedyBot) BestMove(b chess.Board, l Limits) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)

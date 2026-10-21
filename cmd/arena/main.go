@@ -44,14 +44,14 @@ type finishedGame struct {
 	elapsed  time.Duration
 }
 
-func playGame(i int, a, b bot.Bot, fen string, maxPlies, depth, adjudicate int) finishedGame {
+func playGame(i int, a, b bot.Bot, fen string, maxPlies int, limits bot.Limits, adjudicate int) finishedGame {
 	aIsWhite := i%2 == 0
 	white, black := a, b
 	if !aIsWhite {
 		white, black = b, a
 	}
 	start := time.Now()
-	g, err := match.Play(white, black, fen, maxPlies, depth)
+	g, err := match.Play(white, black, fen, maxPlies, limits)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +173,8 @@ func main() {
 	workers := flag.Int("workers", runtime.NumCPU(), "number of games played at the same time")
 	openingsFile := flag.String("openings", "", "file with one FEN per line; each opening is played twice, colors swapped")
 	adjudicate := flag.Int("adjudicate", 0, "decide games that hit the move limit by material: a lead of at least this many centipawns wins, less is a draw (0 = off)")
-	depth := flag.Int("depth", 4, "search depth passed to both bots")
+	depth := flag.Int("depth", 4, "maximum search depth for both bots (0 = no depth limit)")
+	moveTime := flag.Duration("movetime", 0, "maximum thinking time per move for both bots, e.g. 100ms (0 = no time limit)")
 	flag.Parse()
 
 	set := map[string]bool{}
@@ -214,7 +215,7 @@ func main() {
 	nameA := *botA + " (A)"
 	nameB := *botB + " (B)"
 
-	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, depth %d, %d workers\n", nameA, nameB, *games, *maxPlies, *depth, *workers)
+	fmt.Printf("%s vs %s, %d games, colors alternate, move limit %d, depth %d, movetime %v, %d workers\n", nameA, nameB, *games, *maxPlies, *depth, *moveTime, *workers)
 	if *openingsFile != "" {
 		fmt.Printf("openings: %s (%d positions)\n", *openingsFile, len(starts))
 	}
@@ -226,6 +227,8 @@ func main() {
 	}
 	fmt.Println()
 
+	limits := bot.Limits{Depth: *depth, Time: *moveTime}
+
 	// Workers take game numbers from jobs, play them, and send the results back.
 	// Only this goroutine touches the tally and prints, so no locking is needed.
 	jobs := make(chan int)
@@ -234,7 +237,7 @@ func main() {
 	for w := 0; w < *workers; w++ {
 		go func() {
 			for i := range jobs {
-				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, *depth, *adjudicate)
+				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, limits, *adjudicate)
 			}
 		}()
 	}

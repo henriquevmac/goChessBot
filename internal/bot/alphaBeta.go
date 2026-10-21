@@ -3,6 +3,8 @@ package bot
 import (
 	"goChessBot/internal/chess"
 	"math"
+	"slices"
+	"time"
 )
 
 const (
@@ -11,23 +13,26 @@ const (
 
 type alphaBetaBot struct{}
 
-func (aB alphaBetaBot) alphaBeta(alpha, beta, depth int, b *chess.Board) int {
+func (s *searcher) alphaBeta(alpha, beta, depth int) int {
+	if s.check() {
+		return 0
+	}
 	if depth == 0 {
-		return b.Evaluate()
+		return s.board.Evaluate()
 	}
 	bestValue := -infinite
-	legalMoves := b.GenerateLegalMoves(nil)
+	legalMoves := s.board.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
-		if b.InCheck() {
+		if s.board.InCheck() {
 			return bestValue
 		} else {
 			return 0
 		}
 	}
 	for _, move := range legalMoves {
-		u := b.MakeMove(move)
-		score := -aB.alphaBeta(-beta, -alpha, depth-1, b)
-		b.UnmakeMove(move, u)
+		u := s.board.MakeMove(move)
+		score := -s.alphaBeta(-beta, -alpha, depth-1)
+		s.board.UnmakeMove(move, u)
 		if score > bestValue {
 			bestValue = score
 			if score > alpha {
@@ -41,20 +46,55 @@ func (aB alphaBetaBot) alphaBeta(alpha, beta, depth int, b *chess.Board) int {
 	return bestValue
 }
 
-func (aB alphaBetaBot) BestMove(b chess.Board, depth int) chess.Move {
-	maxScore := -infinite
+func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
+	} else if len(legalMoves) == 1 {
+		return legalMoves[0]
 	}
 	bestMove := legalMoves[0]
-	for _, move := range legalMoves {
-		u := b.MakeMove(move)
-		score := -aB.alphaBeta(-infinite, -maxScore, depth-1, &b)
-		b.UnmakeMove(move, u)
-		if score > maxScore {
-			maxScore = score
-			bestMove = move
+	maxDepth := limits.Depth
+	if maxDepth == 0 {
+		if limits.Time == 0 {
+			maxDepth = 1
+		} else {
+			maxDepth = infinite
+		}
+	}
+	deadline := time.Time{}
+	if limits.Time > 0 {
+		deadline = time.Now().Add(limits.Time)
+	}
+	s := searcher{
+		board:    &b,
+		deadline: deadline,
+		nodes:    0,
+		stopped:  false,
+	}
+	for depth := 1; depth <= maxDepth; depth++ {
+		maxScore := -infinite
+		depthBest := bestMove
+		for _, move := range legalMoves {
+			u := b.MakeMove(move)
+			score := -s.alphaBeta(-infinite, -maxScore, depth-1)
+			b.UnmakeMove(move, u)
+			if score > maxScore {
+				maxScore = score
+				depthBest = move
+			}
+			if s.stopped {
+				break
+			}
+		}
+		if !s.stopped {
+			bestMove = depthBest
+			if i := slices.Index(legalMoves, bestMove); i > 0 {
+				copy(legalMoves[1:i+1], legalMoves[:i])
+				legalMoves[0] = bestMove
+			}
+		} else {
+			break
 		}
 	}
 	return bestMove

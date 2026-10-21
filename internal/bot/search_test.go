@@ -37,7 +37,7 @@ func TestSearchFindsMateInOne(t *testing.T) {
 			// Depth 2 is the first depth that sees the opponent has no reply.
 			for depth := 2; depth <= 3; depth++ {
 				b := mustBoard(t, tt.fen)
-				if got := bot.BestMove(*b, depth).String(); got != tt.want {
+				if got := bot.BestMove(*b, Limits{Depth: depth}).String(); got != tt.want {
 					t.Errorf("%s, depth %d: BestMove = %s, want the mate %s", tt.name, depth, got, tt.want)
 				}
 			}
@@ -51,7 +51,7 @@ func TestSearchWinsFreeMaterial(t *testing.T) {
 	forEachSearchBot(t, func(t *testing.T, bot Bot) {
 		for depth := 1; depth <= 3; depth++ {
 			b := mustBoard(t, fen)
-			if got := bot.BestMove(*b, depth).String(); got != "d1d5" {
+			if got := bot.BestMove(*b, Limits{Depth: depth}).String(); got != "d1d5" {
 				t.Errorf("depth %d: BestMove = %s, want d1d5 (wins the queen)", depth, got)
 			}
 		}
@@ -65,7 +65,7 @@ func TestSearchDoesNotStalemateWhenWinning(t *testing.T) {
 	forEachSearchBot(t, func(t *testing.T, bot Bot) {
 		for depth := 2; depth <= 3; depth++ {
 			b := mustBoard(t, fen)
-			if got := bot.BestMove(*b, depth).String(); got == "f1f7" {
+			if got := bot.BestMove(*b, Limits{Depth: depth}).String(); got == "f1f7" {
 				t.Errorf("depth %d: BestMove = f1f7, which stalemates while a queen up", depth)
 			}
 		}
@@ -92,7 +92,7 @@ func TestSearchReturnsALegalMoveWhenLost(t *testing.T) {
 				if len(legal) == 0 {
 					t.Fatalf("%s: test position has no legal moves", tt.name)
 				}
-				if got := bot.BestMove(*b, depth); !slices.Contains(legal, got) {
+				if got := bot.BestMove(*b, Limits{Depth: depth}); !slices.Contains(legal, got) {
 					t.Errorf("%s, depth %d: BestMove = %s, which is not a legal move", tt.name, depth, got)
 				}
 			}
@@ -106,7 +106,7 @@ func TestSearchDoesNotChangeBoard(t *testing.T) {
 		for _, fen := range contractFENs {
 			b := mustBoard(t, fen)
 			before := b.FEN()
-			bot.BestMove(*b, 3)
+			bot.BestMove(*b, Limits{Depth: 3})
 			if after := b.FEN(); after != before {
 				t.Errorf("BestMove changed the board: %s → %s", before, after)
 			}
