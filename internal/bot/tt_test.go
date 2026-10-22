@@ -92,7 +92,7 @@ func TestOrderMovesTTMoveFirst(t *testing.T) {
 		if ttMove == 0 {
 			continue
 		}
-		orderMoves(b, moves, ttMove)
+		testSearcher(b).orderMoves(moves, ttMove)
 		if moves[0] != ttMove {
 			t.Errorf("%s: stored move %s is at position %d, want 0; order %v",
 				fen, ttMove, indexOf(t, moves, ttMove.String()), uciList(moves))
@@ -104,7 +104,7 @@ func TestOrderMovesTTMoveFirst(t *testing.T) {
 func TestOrderMovesNoTTMove(t *testing.T) {
 	b := mustBoard(t, "4k3/8/8/3q4/4P3/8/8/3QK3 w - - 0 1")
 	moves := b.GenerateLegalMoves(nil)
-	orderMoves(b, moves, chess.Move(0))
+	testSearcher(b).orderMoves(moves, chess.Move(0))
 	if moves[0].String() != "e4d5" {
 		t.Errorf("without a stored move, first move = %s, want e4d5 (pawn takes queen)", moves[0])
 	}

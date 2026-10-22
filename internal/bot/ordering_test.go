@@ -31,7 +31,7 @@ func ordered(t *testing.T, fen string) (*chess.Board, []chess.Move) {
 	t.Helper()
 	b := mustBoard(t, fen)
 	moves := b.GenerateLegalMoves(nil)
-	orderMoves(b, moves, chess.Move(0))
+	testSearcher(b).orderMoves(moves, chess.Move(0))
 	return b, moves
 }
 
@@ -53,7 +53,7 @@ func TestOrderMovesIsAPermutation(t *testing.T) {
 		original := b.GenerateLegalMoves(nil)
 		moves := slices.Clone(original)
 		before := *b
-		orderMoves(b, moves, chess.Move(0))
+		testSearcher(b).orderMoves(moves, chess.Move(0))
 
 		want, got := slices.Clone(original), slices.Clone(moves)
 		slices.Sort(want)
@@ -72,7 +72,7 @@ func TestOrderMovesWorksOnASubset(t *testing.T) {
 	b := mustBoard(t, orderingFENs[1])
 	captures := b.GenerateCaptureMoves(nil)
 	moves := slices.Clone(captures)
-	orderMoves(b, moves, chess.Move(0))
+	testSearcher(b).orderMoves(moves, chess.Move(0))
 	want, got := slices.Clone(captures), slices.Clone(moves)
 	slices.Sort(want)
 	slices.Sort(got)

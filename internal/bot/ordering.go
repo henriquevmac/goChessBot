@@ -9,6 +9,9 @@ const (
 	captureBase    = 10_000
 	promotionBase  = 20_000
 	ttMoveScore    = 1_000_000
+	killer1Score   = 9_000
+	killer2Score   = 8_000
+	historyMax     = 7_999
 )
 
 func scoreMove(b *chess.Board, m chess.Move) int {
@@ -31,24 +34,33 @@ func scoreMove(b *chess.Board, m chess.Move) int {
 	return score
 }
 
-func orderMoves(b *chess.Board, moves []chess.Move, ttMove chess.Move) {
+func (s *searcher) orderMoves(moves []chess.Move, ttMove chess.Move) {
 	var scores [256]int
 	for idx, move := range moves {
 		if move == ttMove {
 			scores[idx] = ttMoveScore
+		} else if move.IsCapture() || move.IsPromotion() {
+			scores[idx] = scoreMove(s.board, move)
 		} else {
-			scores[idx] = scoreMove(b, move)
+			scores[idx] = min(s.historyScores[move.From()][move.To()], historyMax)
+			if s.ply < maxPly {
+				if move == s.killers[s.ply][0] {
+					scores[idx] = killer1Score
+				} else if move == s.killers[s.ply][1] {
+					scores[idx] = killer2Score
+				}
+			}
 		}
 	}
 	for i := 1; i < len(moves); i++ {
-		m, s := moves[i], scores[i]
+		move, score := moves[i], scores[i]
 		j := i - 1
-		for j >= 0 && scores[j] < s {
+		for j >= 0 && scores[j] < score {
 			moves[j+1] = moves[j]
 			scores[j+1] = scores[j]
 			j--
 		}
-		moves[j+1] = m
-		scores[j+1] = s
+		moves[j+1] = move
+		scores[j+1] = score
 	}
 }

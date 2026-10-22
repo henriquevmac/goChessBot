@@ -6,19 +6,37 @@ import (
 )
 
 const mateValue = 1_000_000
+const maxPly = 128
 
 type searcher struct {
-	board    *chess.Board
-	deadline time.Time
-	nodes    int
-	stopped  bool
-	tt       *transpositionTable
-	history  []uint64
-	ply      int
+	board         *chess.Board
+	deadline      time.Time
+	nodes         int
+	stopped       bool
+	tt            *transpositionTable
+	history       []uint64
+	ply           int
+	killers       [maxPly][2]chess.Move
+	historyScores [64][64]int
 }
 
 func matedScore(ply int) int {
 	return -mateValue + ply
+}
+
+func (s *searcher) recordCutoff(m chess.Move, depth int) {
+	if m.IsCapture() || m.IsPromotion() {
+		return
+	}
+	s.historyScores[m.From()][m.To()] += depth * depth
+	if s.ply >= maxPly {
+		return
+	}
+	k := &s.killers[s.ply]
+	if k[0] != m {
+		k[1] = k[0]
+		k[0] = m
+	}
 }
 
 func (s *searcher) quiesce(alpha, beta int) int {
@@ -36,7 +54,7 @@ func (s *searcher) quiesce(alpha, beta int) int {
 	}
 
 	captures := s.board.GenerateCaptureMoves(nil)
-	orderMoves(s.board, captures, chess.Move(0))
+	s.orderMoves(captures, chess.Move(0))
 	for _, move := range captures {
 		u := s.board.MakeMove(move)
 		score := -s.quiesce(-beta, -alpha)
