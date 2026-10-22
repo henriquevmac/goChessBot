@@ -29,6 +29,26 @@ func newTranspositionTable(sizeLog2 int) *transpositionTable {
 	return &transpositionTable{entries: entries, mask: mask}
 }
 
+func scoreToTT(recScore int, ply int) int {
+	score := recScore
+	if score > mateValue-1000 {
+		score += ply
+	} else if score < -(mateValue - 1000) {
+		score -= ply
+	}
+	return score
+}
+
+func scoreFromTT(recScore int, ply int) int {
+	score := recScore
+	if score > mateValue-1000 {
+		score -= ply
+	} else if score < -(mateValue - 1000) {
+		score += ply
+	}
+	return score
+}
+
 func (tt *transpositionTable) probe(key uint64) (ttEntry, bool) {
 	entry := tt.entries[key&tt.mask]
 	if entry.key == key {

@@ -144,23 +144,27 @@ func TestPromotionsBeforeQuietMoves(t *testing.T) {
 }
 
 // referenceScore is a plain negamax (no pruning, no ordering) whose leaves call
-// quiesce with a full window, the same leaf alphaBeta uses. Mate and stalemate
-// are scored like in alphaBeta.
+// quiesce with a full window, the same leaf alphaBeta uses. Checkmate scores
+// matedScore(ply), stalemate 0, like in alphaBeta.
 func referenceScore(s *searcher, depth int) int {
+	return referenceScoreAt(s, depth, 0)
+}
+
+func referenceScoreAt(s *searcher, depth, ply int) int {
 	if depth == 0 {
 		return s.quiesce(-infinite, infinite)
 	}
 	moves := s.board.GenerateLegalMoves(nil)
 	if len(moves) == 0 {
 		if s.board.InCheck() {
-			return -infinite
+			return matedScore(ply)
 		}
 		return 0
 	}
 	best := -infinite
 	for _, m := range moves {
 		u := s.board.MakeMove(m)
-		best = max(best, -referenceScore(s, depth-1))
+		best = max(best, -referenceScoreAt(s, depth-1, ply+1))
 		s.board.UnmakeMove(m, u)
 	}
 	return best

@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const mateValue = 1_000_000
+
 type searcher struct {
 	board    *chess.Board
 	deadline time.Time
@@ -12,6 +14,11 @@ type searcher struct {
 	stopped  bool
 	tt       *transpositionTable
 	history  []uint64
+	ply      int
+}
+
+func matedScore(ply int) int {
+	return -mateValue + ply
 }
 
 func (s *searcher) quiesce(alpha, beta int) int {
