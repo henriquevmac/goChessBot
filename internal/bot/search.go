@@ -24,6 +24,14 @@ func matedScore(ply int) int {
 	return -mateValue + ply
 }
 
+func startNextDepth(elapsed, limit time.Duration) bool {
+	if limit == 0 {
+		return true
+	} else {
+		return elapsed <= limit/2
+	}
+}
+
 func (s *searcher) recordCutoff(m chess.Move, depth int) {
 	if m.IsCapture() || m.IsPromotion() {
 		return

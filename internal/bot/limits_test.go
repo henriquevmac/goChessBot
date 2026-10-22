@@ -150,3 +150,26 @@ func TestTimedSearchConcurrent(t *testing.T) {
 		wg.Wait()
 	})
 }
+
+// startNextDepth decides whether another iterative deepening depth is worth starting.
+// With a time limit, only while less than half of it is used; without one, always.
+func TestStartNextDepth(t *testing.T) {
+	tests := []struct {
+		elapsed, limit time.Duration
+		want           bool
+	}{
+		{0, 0, true},                      // no time limit: the depth limit decides
+		{time.Hour, 0, true},              // still no time limit
+		{0, 100 * time.Millisecond, true}, // nothing used yet
+		{30 * time.Millisecond, 100 * time.Millisecond, true}, // under half
+		{49 * time.Millisecond, 100 * time.Millisecond, true},
+		{51 * time.Millisecond, 100 * time.Millisecond, false}, // over half: the next depth would not finish
+		{90 * time.Millisecond, 100 * time.Millisecond, false},
+		{150 * time.Millisecond, 100 * time.Millisecond, false}, // already over the limit
+	}
+	for _, tt := range tests {
+		if got := startNextDepth(tt.elapsed, tt.limit); got != tt.want {
+			t.Errorf("startNextDepth(%v, %v) = %v, want %v", tt.elapsed, tt.limit, got, tt.want)
+		}
+	}
+}

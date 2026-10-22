@@ -108,6 +108,7 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		}
 	}
 	deadline := time.Time{}
+	start := time.Now()
 	if limits.Time > 0 {
 		deadline = time.Now().Add(limits.Time)
 	}
@@ -130,21 +131,20 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 			score := -s.alphaBeta(-infinite, -maxScore, depth-1)
 			s.history = s.history[:len(s.history)-1]
 			b.UnmakeMove(move, u)
+			if s.stopped {
+				break
+			}
 			if score > maxScore {
 				maxScore = score
 				depthBest = move
 			}
-			if s.stopped {
-				break
-			}
 		}
-		if !s.stopped {
-			bestMove = depthBest
-			if i := slices.Index(legalMoves, bestMove); i > 0 {
-				copy(legalMoves[1:i+1], legalMoves[:i])
-				legalMoves[0] = bestMove
-			}
-		} else {
+		bestMove = depthBest
+		if i := slices.Index(legalMoves, bestMove); i > 0 {
+			copy(legalMoves[1:i+1], legalMoves[:i])
+			legalMoves[0] = bestMove
+		}
+		if s.stopped || !startNextDepth(time.Since(start), limits.Time) {
 			break
 		}
 	}
