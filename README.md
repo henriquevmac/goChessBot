@@ -73,7 +73,7 @@ Parts of the alpha-beta search can be switched off by adding them to its name, s
 go run ./cmd/arena -openings openings.txt -a alphaBeta -b alphaBeta-noTT -depth 0 -movetime 100ms -adjudicate 300 -q
 ```
 
-The switches are `noTT` (transposition table), `noKillers`, `noHistory` and `noRepetition`, and can be combined, e.g. `alphaBeta-noKillers-noHistory`. Use a time limit rather than a depth limit, since most of these make the search faster rather than different. Between such close versions a few hundred games give a margin of about ±40 Elo, so small differences need more games.
+The switches are `noTT` (transposition table), `freshTT` (a new, empty table for every move instead of one kept for the whole game), `noKillers`, `noHistory` and `noRepetition`, and can be combined, e.g. `alphaBeta-noKillers-noHistory`. Use a time limit rather than a depth limit, since most of these make the search faster rather than different. Between such close versions a few hundred games give a margin of about ±40 Elo, so small differences need more games.
 
 ### Opening positions
 

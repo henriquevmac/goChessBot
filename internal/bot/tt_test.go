@@ -203,3 +203,18 @@ func TestNoTTBotHasNoTable(t *testing.T) {
 		t.Errorf("a NoTT bot created a table")
 	}
 }
+
+// With FreshTT the bot starts every move with a new, empty table.
+func TestFreshTTGivesANewTableEveryMove(t *testing.T) {
+	bot := NewAlphaBeta(AlphaBetaOptions{FreshTT: true}).(*alphaBetaBot)
+	b := mustBoard(t, orderingFENs[0])
+	bot.BestMove(*b, Limits{Depth: 3})
+	first := bot.tt
+	bot.BestMove(*b, Limits{Depth: 3})
+	if bot.tt == first {
+		t.Errorf("the second move reused the first move's table")
+	}
+	if filledEntries(first) == 0 || filledEntries(bot.tt) == 0 {
+		t.Errorf("a FreshTT bot did not fill its tables")
+	}
+}

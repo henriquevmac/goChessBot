@@ -30,6 +30,7 @@ type AlphaBetaOptions struct {
 	NoKillers    bool
 	NoHistory    bool
 	NoRepetition bool
+	FreshTT      bool
 }
 
 func NewAlphaBeta(options AlphaBetaOptions) Bot {

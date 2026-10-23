@@ -134,7 +134,7 @@ func (aB *alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		options:  aB.options,
 	}
 	if !aB.options.NoTT {
-		if aB.tt == nil {
+		if aB.tt == nil || aB.options.FreshTT {
 			aB.tt = newTranspositionTable(18)
 		}
 		s.tt = aB.tt

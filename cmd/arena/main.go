@@ -37,6 +37,7 @@ var alphaBetaSwitches = map[string]func(*bot.AlphaBetaOptions){
 	"noKillers":    func(o *bot.AlphaBetaOptions) { o.NoKillers = true },
 	"noHistory":    func(o *bot.AlphaBetaOptions) { o.NoHistory = true },
 	"noRepetition": func(o *bot.AlphaBetaOptions) { o.NoRepetition = true },
+	"freshTT":      func(o *bot.AlphaBetaOptions) { o.FreshTT = true },
 }
 
 func newBot(name string) (bot.Bot, error) {

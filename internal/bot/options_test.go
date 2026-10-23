@@ -14,6 +14,7 @@ var alphaBetaVariants = []AlphaBetaOptions{
 	{NoKillers: true},
 	{NoHistory: true},
 	{NoRepetition: true},
+	{FreshTT: true},
 	{NoTT: true, NoKillers: true, NoHistory: true, NoRepetition: true},
 }
 
