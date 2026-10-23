@@ -247,12 +247,10 @@ func main() {
 
 	*workers = max(1, min(*workers, *games))
 
-	a, err := newBot(*botA)
-	if err != nil {
+	if _, err := newBot(*botA); err != nil {
 		log.Fatal(err)
 	}
-	b, err := newBot(*botB)
-	if err != nil {
+	if _, err := newBot(*botB); err != nil {
 		log.Fatal(err)
 	}
 	nameA := *botA + " (A)"
@@ -274,12 +272,15 @@ func main() {
 
 	// Workers take game numbers from jobs, play them, and send the results back.
 	// Only this goroutine touches the tally and prints, so no locking is needed.
+	// Every game gets new bots, since a bot can keep what it learned between moves.
 	jobs := make(chan int)
 	done := make(chan finishedGame)
 	start := time.Now()
 	for w := 0; w < *workers; w++ {
 		go func() {
 			for i := range jobs {
+				a, _ := newBot(*botA) // both names were checked above
+				b, _ := newBot(*botB)
 				done <- playGame(i, a, b, starts[(i/2)%len(starts)], *maxPlies, limits, *adjudicate)
 			}
 		}()

@@ -33,7 +33,7 @@ type AlphaBetaOptions struct {
 }
 
 func NewAlphaBeta(options AlphaBetaOptions) Bot {
-	return alphaBetaBot{options: options}
+	return &alphaBetaBot{options: options}
 }
 
 type randomBot struct{}
@@ -88,7 +88,7 @@ func New(bt BotType) Bot {
 	case NegaMax:
 		return negaMaxBot{}
 	case AlphaBeta:
-		return alphaBetaBot{}
+		return &alphaBetaBot{}
 	default:
 		return nil
 	}

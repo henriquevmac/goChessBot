@@ -4,6 +4,7 @@ import (
 	"goChessBot/internal/chess"
 	"math"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,8 @@ const (
 
 type alphaBetaBot struct {
 	options AlphaBetaOptions
+	mu      sync.Mutex
+	tt      *transpositionTable
 }
 
 func (s *searcher) alphaBeta(alpha, beta, depth int) int {
@@ -98,7 +101,7 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	return bestValue
 }
 
-func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
+func (aB *alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 	legalMoves := b.GenerateLegalMoves(nil)
 	if len(legalMoves) == 0 {
 		return chess.Move(0)
@@ -114,6 +117,8 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 			maxDepth = infinite
 		}
 	}
+	aB.mu.Lock()
+	defer aB.mu.Unlock()
 	deadline := time.Time{}
 	start := time.Now()
 	if limits.Time > 0 {
@@ -129,7 +134,10 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		options:  aB.options,
 	}
 	if !aB.options.NoTT {
-		s.tt = newTranspositionTable(18)
+		if aB.tt == nil {
+			aB.tt = newTranspositionTable(18)
+		}
+		s.tt = aB.tt
 	}
 	s.orderMoves(legalMoves, chess.Move(0))
 	for depth := 1; depth <= maxDepth; depth++ {

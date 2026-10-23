@@ -119,16 +119,87 @@ func TestOrderMovesNoTTMove(t *testing.T) {
 	}
 }
 
-// Searching the same position twice with a fresh table gives the same move.
+// Two new bots searching the same position give the same move.
 func TestBestMoveIsRepeatable(t *testing.T) {
-	forEachSearchBot(t, func(t *testing.T, bot Bot) {
+	for _, bt := range searchBots {
 		for _, fen := range orderingFENs {
 			b := mustBoard(t, fen)
-			first := bot.BestMove(*b, Limits{Depth: 3})
-			second := bot.BestMove(*b, Limits{Depth: 3})
+			first := New(bt).BestMove(*b, Limits{Depth: 3})
+			second := New(bt).BestMove(*b, Limits{Depth: 3})
 			if first != second {
-				t.Errorf("%s: two identical searches gave %s and %s", fen, first, second)
+				t.Errorf("bot type %d, %s: two identical searches gave %s and %s", bt, fen, first, second)
 			}
 		}
-	})
+	}
+}
+
+func filledEntries(tt *transpositionTable) int {
+	n := 0
+	for _, e := range tt.entries {
+		if e != (ttEntry{}) {
+			n++
+		}
+	}
+	return n
+}
+
+// The bot keeps its table from one move to the next.
+func TestTableIsKeptBetweenMoves(t *testing.T) {
+	bot := New(AlphaBeta).(*alphaBetaBot)
+	b := mustBoard(t, orderingFENs[0])
+	bot.BestMove(*b, Limits{Depth: 3})
+	table := bot.tt
+	if table == nil || filledEntries(table) == 0 {
+		t.Fatalf("no filled table after the first move")
+	}
+	after := filledEntries(table)
+
+	b = mustBoard(t, orderingFENs[4])
+	bot.BestMove(*b, Limits{Depth: 3})
+	if bot.tt != table {
+		t.Errorf("the second move got a new table")
+	}
+	if filledEntries(table) <= after {
+		t.Errorf("the table did not grow on the second move (%d entries before, %d after)", after, filledEntries(table))
+	}
+}
+
+// Separate bots don't share a table.
+func TestBotsHaveTheirOwnTable(t *testing.T) {
+	b := mustBoard(t, orderingFENs[0])
+	first, second := New(AlphaBeta).(*alphaBetaBot), New(AlphaBeta).(*alphaBetaBot)
+	first.BestMove(*b, Limits{Depth: 2})
+	second.BestMove(*b, Limits{Depth: 2})
+	if first.tt == second.tt {
+		t.Errorf("two bots share one table")
+	}
+}
+
+// A table filled by earlier moves must not change what the bot finds: after
+// searching other positions, it still plays the mate in one, and its score for
+// the mate in two is the same as with a fresh table.
+func TestReusedTableGivesSameResults(t *testing.T) {
+	bot := New(AlphaBeta).(*alphaBetaBot)
+	for _, fen := range orderingFENs {
+		bot.BestMove(*mustBoard(t, fen), Limits{Depth: 3})
+	}
+	if got := bot.BestMove(*mustBoard(t, mateIn1FEN), Limits{Depth: 3}).String(); got != "a1a8" {
+		t.Errorf("with a used table: BestMove = %s, want the mate a1a8", got)
+	}
+
+	b := mustBoard(t, mateIn2FEN)
+	used := &searcher{board: b, tt: bot.tt}
+	fresh := testSearcher(b)
+	if u, f := used.alphaBeta(-infinite, infinite, 4), fresh.alphaBeta(-infinite, infinite, 4); u != f {
+		t.Errorf("mate in two scores %d with a used table, %d with a fresh one", u, f)
+	}
+}
+
+// With NoTT the bot never creates a table.
+func TestNoTTBotHasNoTable(t *testing.T) {
+	bot := NewAlphaBeta(AlphaBetaOptions{NoTT: true}).(*alphaBetaBot)
+	bot.BestMove(*mustBoard(t, orderingFENs[0]), Limits{Depth: 3})
+	if bot.tt != nil {
+		t.Errorf("a NoTT bot created a table")
+	}
 }
