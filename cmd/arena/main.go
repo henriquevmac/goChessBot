@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"strings"
@@ -29,7 +30,27 @@ var botTypes = map[string]bot.BotType{
 	"alphaBeta": bot.AlphaBeta,
 }
 
+// Switches that turn off one part of the alpha-beta search, written after the
+// name: alphaBeta-noTT, alphaBeta-noKillers-noHistory, ...
+var alphaBetaSwitches = map[string]func(*bot.AlphaBetaOptions){
+	"noTT":         func(o *bot.AlphaBetaOptions) { o.NoTT = true },
+	"noKillers":    func(o *bot.AlphaBetaOptions) { o.NoKillers = true },
+	"noHistory":    func(o *bot.AlphaBetaOptions) { o.NoHistory = true },
+	"noRepetition": func(o *bot.AlphaBetaOptions) { o.NoRepetition = true },
+}
+
 func newBot(name string) (bot.Bot, error) {
+	if base, switches, found := strings.Cut(name, "-"); found && base == "alphaBeta" {
+		var options bot.AlphaBetaOptions
+		for _, sw := range strings.Split(switches, "-") {
+			set, ok := alphaBetaSwitches[sw]
+			if !ok {
+				return nil, fmt.Errorf("unknown alphaBeta switch %q in %q", sw, name)
+			}
+			set(&options)
+		}
+		return bot.NewAlphaBeta(options), nil
+	}
 	bt, ok := botTypes[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown bot %q", name)
@@ -129,6 +150,28 @@ func percent(part, total int) float64 {
 		return 0
 	}
 	return 100 * float64(part) / float64(total)
+}
+
+func eloFromScore(p float64) float64 {
+	return -400 * math.Log10(1/p-1)
+}
+
+// eloDifference estimates how much stronger A is than B from the finished games,
+// with the margin of a 95% confidence interval. The margin is infinite when the
+// games say too little, for example when one side won or drew all of them.
+func eloDifference(wins, losses, draws int) (elo, margin float64) {
+	n := float64(wins + losses + draws)
+	if n == 0 {
+		return 0, math.Inf(1)
+	}
+	w, l, d := float64(wins)/n, float64(losses)/n, float64(draws)/n
+	p := w + d/2
+	sd := math.Sqrt((w*(1-p)*(1-p) + d*(0.5-p)*(0.5-p) + l*p*p) / n)
+	low, high := p-1.96*sd, p+1.96*sd
+	if sd == 0 || low <= 0 || high >= 1 {
+		return eloFromScore(p), math.Inf(1)
+	}
+	return eloFromScore(p), (eloFromScore(high) - eloFromScore(low)) / 2
 }
 
 func loadOpenings(path string) ([]string, error) {
@@ -300,6 +343,13 @@ func main() {
 		nameB, t.winsB, percent(t.winsB, *games), scoreB, finished, percent(int(2*scoreB), 2*finished))
 	fmt.Printf("  %-20s %4d       (%5.1f%%)\n", "draws", t.draws, percent(t.draws, *games))
 	fmt.Printf("  %-20s %4d       (%5.1f%%)\n", "unfinished", t.unfinished, percent(t.unfinished, *games))
+
+	elo, margin := eloDifference(t.winsA, t.winsB, t.draws)
+	if math.IsInf(margin, 1) {
+		fmt.Printf("\n  Elo difference (A - B): not enough information (play more games)\n")
+	} else {
+		fmt.Printf("\n  Elo difference (A - B): %+.0f ± %.0f (95%% confidence)\n", elo, margin)
+	}
 
 	fmt.Println("\n  How games ended:")
 	for _, r := range []chess.GameResult{

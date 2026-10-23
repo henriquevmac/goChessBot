@@ -25,6 +25,17 @@ type Bot interface {
 	BestMove(b chess.Board, l Limits) chess.Move
 }
 
+type AlphaBetaOptions struct {
+	NoTT         bool
+	NoKillers    bool
+	NoHistory    bool
+	NoRepetition bool
+}
+
+func NewAlphaBeta(options AlphaBetaOptions) Bot {
+	return alphaBetaBot{options: options}
+}
+
 type randomBot struct{}
 
 func (r randomBot) BestMove(b chess.Board, l Limits) chess.Move {

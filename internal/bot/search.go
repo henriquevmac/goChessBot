@@ -18,6 +18,7 @@ type searcher struct {
 	ply           int
 	killers       [maxPly][2]chess.Move
 	historyScores [64][64]int
+	options       AlphaBetaOptions
 }
 
 func matedScore(ply int) int {
@@ -36,8 +37,10 @@ func (s *searcher) recordCutoff(m chess.Move, depth int) {
 	if m.IsCapture() || m.IsPromotion() {
 		return
 	}
-	s.historyScores[m.From()][m.To()] += depth * depth
-	if s.ply >= maxPly {
+	if !s.options.NoHistory {
+		s.historyScores[m.From()][m.To()] += depth * depth
+	}
+	if s.options.NoKillers || s.ply >= maxPly {
 		return
 	}
 	k := &s.killers[s.ply]

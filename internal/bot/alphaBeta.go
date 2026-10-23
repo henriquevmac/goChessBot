@@ -11,24 +11,31 @@ const (
 	infinite = math.MaxInt
 )
 
-type alphaBetaBot struct{}
+type alphaBetaBot struct {
+	options AlphaBetaOptions
+}
 
 func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	if s.check() {
 		return 0
 	}
-	stop := max(len(s.history)-s.board.HalfmoveClock, 0)
-	for i := len(s.history) - 2; i >= stop; i -= 2 {
-		if s.history[i] == s.board.Hash {
-			return 0
+	if !s.options.NoRepetition {
+		stop := max(len(s.history)-s.board.HalfmoveClock, 0)
+		for i := len(s.history) - 2; i >= stop; i -= 2 {
+			if s.history[i] == s.board.Hash {
+				return 0
+			}
 		}
 	}
 	if depth == 0 {
 		return s.quiesce(alpha, beta)
 	}
 	alphaOrig := alpha
-	entry, found := s.tt.probe(s.board.Hash)
 	ttBestMove := chess.Move(0)
+	entry, found := ttEntry{}, false
+	if !s.options.NoTT {
+		entry, found = s.tt.probe(s.board.Hash)
+	}
 	if found {
 		score := scoreFromTT(entry.score, s.ply)
 		if entry.depth >= depth {
@@ -78,7 +85,7 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 			break
 		}
 	}
-	if !s.stopped {
+	if !s.stopped && !s.options.NoTT {
 		flag := ttExact
 		if bestValue <= alphaOrig {
 			flag = ttUpper
@@ -117,9 +124,12 @@ func (aB alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		deadline: deadline,
 		nodes:    0,
 		stopped:  false,
-		tt:       newTranspositionTable(18),
 		history:  slices.Clone(limits.History),
 		ply:      1,
+		options:  aB.options,
+	}
+	if !aB.options.NoTT {
+		s.tt = newTranspositionTable(18)
 	}
 	s.orderMoves(legalMoves, chess.Move(0))
 	for depth := 1; depth <= maxDepth; depth++ {

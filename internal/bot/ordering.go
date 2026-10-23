@@ -42,8 +42,10 @@ func (s *searcher) orderMoves(moves []chess.Move, ttMove chess.Move) {
 		} else if move.IsCapture() || move.IsPromotion() {
 			scores[idx] = scoreMove(s.board, move)
 		} else {
-			scores[idx] = min(s.historyScores[move.From()][move.To()], historyMax)
-			if s.ply < maxPly {
+			if !s.options.NoHistory {
+				scores[idx] = min(s.historyScores[move.From()][move.To()], historyMax)
+			}
+			if !s.options.NoKillers && s.ply < maxPly {
 				if move == s.killers[s.ply][0] {
 					scores[idx] = killer1Score
 				} else if move == s.killers[s.ply][1] {

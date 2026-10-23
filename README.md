@@ -57,10 +57,23 @@ go run ./cmd/arena -openings openings.txt -q
 | `-openings` | file with one FEN per line; each position is played twice, once with each bot as White |
 | `-fen` | play every game from this one position instead |
 | `-maxplies` | stop unfinished games after this many half-moves (default 300) |
+| `-depth` | maximum search depth for both bots (default 4; 0 = no depth limit) |
+| `-movetime` | maximum thinking time per move for both bots, e.g. `100ms` (default 0 = no time limit) |
+| `-adjudicate` | decide games that hit the move limit by material: a lead of at least this many centipawns wins, less is a draw (default 0 = off) |
 | `-workers` | games played at the same time (default: one per CPU core) |
 | `-q` / `-v` | only the summary / also print every game's moves in UCI notation |
 
-Colors alternate between games. The summary shows each bot's wins and score (1 point per win, half per draw) and how the games ended, including forfeits if a bot ever returns an illegal move.
+Colors alternate between games. The summary shows each bot's wins and score (1 point per win, half per draw), the estimated Elo difference between them with a 95% margin, and how the games ended, including forfeits if a bot ever returns an illegal move.
+
+### Comparing alpha-beta versions
+
+Parts of the alpha-beta search can be switched off by adding them to its name, so a change can be measured against the full bot:
+
+```sh
+go run ./cmd/arena -openings openings.txt -a alphaBeta -b alphaBeta-noTT -depth 0 -movetime 100ms -adjudicate 300 -q
+```
+
+The switches are `noTT` (transposition table), `noKillers`, `noHistory` and `noRepetition`, and can be combined, e.g. `alphaBeta-noKillers-noHistory`. Use a time limit rather than a depth limit, since most of these make the search faster rather than different. Between such close versions a few hundred games give a margin of about ±40 Elo, so small differences need more games.
 
 ### Opening positions
 
