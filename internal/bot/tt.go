@@ -12,9 +12,9 @@ const (
 
 type ttEntry struct {
 	key      uint64
+	score    int32
 	bestMove chess.Move
-	depth    int
-	score    int
+	depth    int8
 	flag     ttFlag
 }
 

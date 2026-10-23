@@ -2,6 +2,7 @@ package bot
 
 import (
 	"testing"
+	"unsafe"
 
 	"goChessBot/internal/chess"
 )
@@ -10,6 +11,14 @@ import (
 // BestMove would create one.
 func testSearcher(b *chess.Board) *searcher {
 	return &searcher{board: b, tt: newTranspositionTable(16)}
+}
+
+// Keep entries at 16 bytes: a new field, or the fields in another order, can
+// add padding without anyone noticing.
+func TestTTEntrySize(t *testing.T) {
+	if size := unsafe.Sizeof(ttEntry{}); size != 16 {
+		t.Errorf("ttEntry is %d bytes, want 16", size)
+	}
 }
 
 func TestTTStoreAndProbe(t *testing.T) {
@@ -67,11 +76,11 @@ func TestTTStoreReplaces(t *testing.T) {
 func TestTTManyKeys(t *testing.T) {
 	tt := newTranspositionTable(12)
 	for i := uint64(0); i < 1<<12; i++ {
-		tt.store(ttEntry{key: i<<32 | i, depth: int(i % 10), score: int(i)})
+		tt.store(ttEntry{key: i<<32 | i, depth: int8(i % 10), score: int32(i)})
 	}
 	for i := uint64(0); i < 1<<12; i++ {
 		got, ok := tt.probe(i<<32 | i)
-		if !ok || got.score != int(i) {
+		if !ok || got.score != int32(i) {
 			t.Fatalf("key %d: probe = %+v, %v; want score %d", i, got, ok, i)
 		}
 	}

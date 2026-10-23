@@ -123,7 +123,7 @@ func TestTTStoresMateRelativeToPosition(t *testing.T) {
 	if !ok {
 		t.Fatalf("no table entry for the root after searching it")
 	}
-	if got, want := scoreFromTT(entry.score, 0), -matedScore(1); got != want {
+	if got, want := scoreFromTT(int(entry.score), 0), -matedScore(1); got != want {
 		t.Errorf("root entry reads back as %d, want %d (mate in 1)", got, want)
 	}
 }
@@ -137,7 +137,7 @@ func TestTTMateScoreIsConvertedWhenRead(t *testing.T) {
 	s.ply = 4
 
 	winning := -matedScore(3) // mate 3 plies from the root, seen from ply 2
-	s.tt.store(ttEntry{key: b.Hash, depth: 99, score: scoreToTT(winning, 2), flag: ttExact})
+	s.tt.store(ttEntry{key: b.Hash, depth: 99, score: int32(scoreToTT(winning, 2)), flag: ttExact})
 
 	got := s.alphaBeta(-infinite, infinite, 1)
 	if want := -matedScore(5); got != want {

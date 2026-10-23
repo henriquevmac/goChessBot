@@ -37,8 +37,8 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 		entry, found = s.tt.probe(s.board.Hash)
 	}
 	if found {
-		score := scoreFromTT(entry.score, s.ply)
-		if entry.depth >= depth {
+		score := scoreFromTT(int(entry.score), s.ply)
+		if int(entry.depth) >= depth {
 			switch entry.flag {
 			case ttExact:
 				return score
@@ -93,7 +93,7 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 			flag = ttLower
 		}
 		score := scoreToTT(bestValue, s.ply)
-		s.tt.store(ttEntry{key: s.board.Hash, bestMove: bestMove, depth: depth, score: score, flag: flag})
+		s.tt.store(ttEntry{key: s.board.Hash, bestMove: bestMove, depth: int8(depth), score: int32(score), flag: flag})
 	}
 	return bestValue
 }
