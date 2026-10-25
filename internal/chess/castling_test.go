@@ -67,7 +67,7 @@ func TestCastling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := mustBoard(t, tt.fen)
-			moves := b.GenerateMoves(nil)
+			moves := b.GenerateMoves(nil, false)
 
 			want := slices.Clone(tt.want)
 			slices.Sort(want)

@@ -1,7 +1,7 @@
 package chess
 
 func (b *Board) GenerateLegalMoves(moves []Move) []Move {
-	pseudo := b.GenerateMoves(moves)
+	pseudo := b.GenerateMoves(moves, false)
 	start := len(moves)
 	n := start
 	for _, move := range pseudo[start:] {
@@ -17,13 +17,10 @@ func (b *Board) GenerateLegalMoves(moves []Move) []Move {
 }
 
 func (b *Board) GenerateCaptureMoves(moves []Move) []Move {
-	pseudo := b.GenerateMoves(moves)
+	pseudo := b.GenerateMoves(moves, true)
 	start := len(moves)
 	n := start
 	for _, move := range pseudo[start:] {
-		if !move.IsCapture() {
-			continue
-		}
 		u := b.MakeMove(move)
 		oppColor := b.ToMove.OppositeColor()
 		if !b.IsSquareAttacked(b.KingPos[colorConversion(oppColor)], b.ToMove) {

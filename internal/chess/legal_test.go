@@ -96,7 +96,7 @@ func TestGenerateLegalMovesAppends(t *testing.T) {
 func TestLegalMovesAreSafePseudoLegalMoves(t *testing.T) {
 	for _, fen := range makeUnmakeFENs {
 		b := mustBoard(t, fen)
-		pseudo := b.GenerateMoves(nil)
+		pseudo := b.GenerateMoves(nil, false)
 		for _, m := range b.GenerateLegalMoves(nil) {
 			if !slices.Contains(pseudo, m) {
 				t.Errorf("%s: legal move %s is not a pseudo-legal move", fen, m)
@@ -111,5 +111,42 @@ func TestLegalMovesAreSafePseudoLegalMoves(t *testing.T) {
 			}
 			b.UnmakeMove(m, u)
 		}
+	}
+}
+
+// GenerateCaptureMoves must return exactly the captures among the legal moves,
+// in every position a couple of plies into the perft positions.
+func TestCaptureMovesAreLegalCaptures(t *testing.T) {
+	var walk func(t *testing.T, b *Board, depth int)
+	walk = func(t *testing.T, b *Board, depth int) {
+		var want []Move
+		for _, m := range b.GenerateLegalMoves(nil) {
+			if m.IsCapture() {
+				want = append(want, m)
+			}
+		}
+		got := b.GenerateCaptureMoves(nil)
+		slices.Sort(want)
+		slices.Sort(got)
+		if !slices.Equal(got, want) {
+			t.Fatalf("%s: GenerateCaptureMoves = %v, want %v", b.FEN(), got, want)
+		}
+		if depth == 0 {
+			return
+		}
+		for _, m := range b.GenerateLegalMoves(nil) {
+			u := b.MakeMove(m)
+			walk(t, b, depth-1)
+			b.UnmakeMove(m, u)
+		}
+	}
+	for _, pos := range perftPositions {
+		t.Run(pos.name, func(t *testing.T) {
+			b, err := CreateBoard(pos.fen)
+			if err != nil {
+				t.Fatal(err)
+			}
+			walk(t, b, 2)
+		})
 	}
 }

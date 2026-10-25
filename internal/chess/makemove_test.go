@@ -42,7 +42,7 @@ func boardDiff(got, want *Board) string {
 // moveByUCI finds the generated move with the given UCI string.
 func moveByUCI(t *testing.T, b *Board, uci string) Move {
 	t.Helper()
-	m, ok := findMove(b.GenerateMoves(nil), uci)
+	m, ok := findMove(b.GenerateMoves(nil, false), uci)
 	if !ok {
 		t.Fatalf("move %s is not generated in this position", uci)
 	}
@@ -161,7 +161,7 @@ func TestMakeUnmakeRestoresPosition(t *testing.T) {
 	for _, fen := range makeUnmakeFENs {
 		b := mustBoard(t, fen)
 		before := *b // Board only holds arrays and numbers, so this is a full copy
-		for _, m := range b.GenerateMoves(nil) {
+		for _, m := range b.GenerateMoves(nil, false) {
 			u := b.MakeMove(m)
 			b.UnmakeMove(m, u)
 			if diff := boardDiff(b, &before); diff != "" {
@@ -177,10 +177,10 @@ func TestMakeUnmakeTwoPly(t *testing.T) {
 	for _, fen := range makeUnmakeFENs {
 		b := mustBoard(t, fen)
 		before := *b
-		for _, m1 := range b.GenerateMoves(nil) {
+		for _, m1 := range b.GenerateMoves(nil, false) {
 			u1 := b.MakeMove(m1)
 			afterFirst := *b
-			for _, m2 := range b.GenerateMoves(nil) {
+			for _, m2 := range b.GenerateMoves(nil, false) {
 				u2 := b.MakeMove(m2)
 				b.UnmakeMove(m2, u2)
 				if diff := boardDiff(b, &afterFirst); diff != "" {
@@ -210,7 +210,7 @@ func TestMakeMoveInvariants(t *testing.T) {
 	}
 	for _, fen := range makeUnmakeFENs {
 		b := mustBoard(t, fen)
-		for _, m := range b.GenerateMoves(nil) {
+		for _, m := range b.GenerateMoves(nil, false) {
 			mover := b.ToMove
 			piecesBefore := count(b)
 			u := b.MakeMove(m)

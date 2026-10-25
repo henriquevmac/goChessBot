@@ -338,7 +338,7 @@ func TestGenerateMoves(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			b := mustBoard(t, tt.fen)
-			moves := b.GenerateMoves(nil)
+			moves := b.GenerateMoves(nil, false)
 
 			want := slices.Clone(tt.want)
 			slices.Sort(want)
@@ -365,7 +365,7 @@ func TestGenerateMovesAppends(t *testing.T) {
 	b := mustBoard(t, startFEN)
 	prefix := CreateMove(0, 1, Normal)
 
-	moves := b.GenerateMoves([]Move{prefix})
+	moves := b.GenerateMoves([]Move{prefix}, false)
 	if len(moves) != 21 {
 		t.Fatalf("got %d moves, want 21 (1 existing + 20 generated)", len(moves))
 	}
@@ -378,9 +378,9 @@ func TestGenerateMovesReusesBuffer(t *testing.T) {
 	b := mustBoard(t, startFEN)
 	buf := make([]Move, 0, 256)
 
-	first := b.GenerateMoves(buf[:0])
+	first := b.GenerateMoves(buf[:0], false)
 	firstList := uciList(first)
-	second := b.GenerateMoves(buf[:0])
+	second := b.GenerateMoves(buf[:0], false)
 
 	if !slices.Equal(firstList, uciList(second)) {
 		t.Errorf("second call with the same buffer gave different moves")

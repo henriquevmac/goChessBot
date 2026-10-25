@@ -33,9 +33,9 @@ const allCastlingRights = WhiteKing | WhiteQueen | BlackKing | BlackQueen
 
 var castlingKeep [64]CastlingRights
 
-func (b *Board) generateKnightOrKingMoves(moves []Move, sq int, targets []int) []Move {
+func (b *Board) generateKnightOrKingMoves(moves []Move, sq int, targets []int, captures bool) []Move {
 	for _, target := range targets {
-		if b.Square[target].IsEmpty() {
+		if b.Square[target].IsEmpty() && !captures {
 			move := CreateMove(sq, target, Normal)
 			moves = append(moves, move)
 		} else if b.Square[target].IsOpponent(b.Square[sq]) {
@@ -46,11 +46,14 @@ func (b *Board) generateKnightOrKingMoves(moves []Move, sq int, targets []int) [
 	return moves
 }
 
-func (b *Board) generateSlidingMoves(moves []Move, sq int, start, end int) []Move {
+func (b *Board) generateSlidingMoves(moves []Move, sq int, start, end int, captures bool) []Move {
 	for dir := start; dir <= end; dir++ {
 		for step := 1; step <= distanceToEdge[sq][dir]; step++ {
 			target := sq + directionOffsets[dir]*step
 			if b.Square[target].IsEmpty() {
+				if captures {
+					continue
+				}
 				move := CreateMove(sq, target, Normal)
 				moves = append(moves, move)
 			} else if b.Square[target].IsOpponent(b.Square[sq]) {
@@ -80,14 +83,14 @@ func addPawnPromotions(moves []Move, from, to int, isCapture bool) []Move {
 	return moves
 }
 
-func (b *Board) generatePawnMoves(moves []Move, sq int) []Move {
+func (b *Board) generatePawnMoves(moves []Move, sq int, captures bool) []Move {
 	row := sq / 8
 	piece := b.Square[sq]
 	c := colorConversion(piece)
 	rules := pawnInfo[c]
 	oneAhead := sq + rules.forward
 	twoAhead := oneAhead + rules.forward
-	if b.Square[oneAhead].IsEmpty() {
+	if b.Square[oneAhead].IsEmpty() && !captures {
 		if oneAhead/8 == rules.promoRow {
 			moves = addPawnPromotions(moves, sq, oneAhead, false)
 		} else {
@@ -141,27 +144,29 @@ ruleLoop:
 	return moves
 }
 
-func (b *Board) GenerateMoves(moves []Move) []Move {
+func (b *Board) GenerateMoves(moves []Move, captures bool) []Move {
 	for idx, piece := range b.Square {
 		if piece.IsOpponent(b.ToMove) {
 			continue
 		}
 		switch piece.Type() {
 		case King:
-			moves = b.generateKnightOrKingMoves(moves, idx, kingTargets[idx])
+			moves = b.generateKnightOrKingMoves(moves, idx, kingTargets[idx], captures)
 		case Pawn:
-			moves = b.generatePawnMoves(moves, idx)
+			moves = b.generatePawnMoves(moves, idx, captures)
 		case Knight:
-			moves = b.generateKnightOrKingMoves(moves, idx, knightTargets[idx])
+			moves = b.generateKnightOrKingMoves(moves, idx, knightTargets[idx], captures)
 		case Bishop:
-			moves = b.generateSlidingMoves(moves, idx, northEast, southWest)
+			moves = b.generateSlidingMoves(moves, idx, northEast, southWest, captures)
 		case Rook:
-			moves = b.generateSlidingMoves(moves, idx, north, west)
+			moves = b.generateSlidingMoves(moves, idx, north, west, captures)
 		case Queen:
-			moves = b.generateSlidingMoves(moves, idx, north, southWest)
+			moves = b.generateSlidingMoves(moves, idx, north, southWest, captures)
 		}
 	}
-	moves = b.generateCastleMoves(moves)
+	if !captures {
+		moves = b.generateCastleMoves(moves)
+	}
 
 	return moves
 }

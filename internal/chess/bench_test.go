@@ -34,7 +34,7 @@ func BenchmarkGenerateMoves(b *testing.B) {
 			board := benchBoard(b, pos.fen)
 			buf := make([]Move, 0, 256)
 			for b.Loop() {
-				buf = board.GenerateMoves(buf[:0])
+				buf = board.GenerateMoves(buf[:0], false)
 			}
 		})
 	}
