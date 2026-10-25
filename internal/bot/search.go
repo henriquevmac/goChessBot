@@ -19,6 +19,7 @@ type searcher struct {
 	killers       [maxPly][2]chess.Move
 	historyScores [64][64]int
 	options       AlphaBetaOptions
+	moveStack     []chess.Move
 }
 
 func matedScore(ply int) int {
@@ -64,7 +65,10 @@ func (s *searcher) quiesce(alpha, beta int) int {
 		alpha = bestValue
 	}
 
-	captures := s.board.GenerateCaptureMoves(nil)
+	start := len(s.moveStack)
+	s.moveStack = s.board.GenerateCaptureMoves(s.moveStack)
+	captures := s.moveStack[start:]
+	defer func() { s.moveStack = s.moveStack[:start] }()
 	s.orderMoves(captures, chess.Move(0))
 	for _, move := range captures {
 		u := s.board.MakeMove(move)

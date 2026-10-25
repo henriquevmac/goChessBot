@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"testing"
+
+	"goChessBot/internal/chess"
 )
 
 // These tests are for bots that search ahead. They only check moves any correct
@@ -112,4 +114,23 @@ func TestSearchDoesNotChangeBoard(t *testing.T) {
 			}
 		}
 	})
+}
+
+// Every node pushes its moves onto the shared move stack and must pop them
+// again on every return, including cutoffs, or the moves of the node above
+// it get overwritten.
+func TestSearchRestoresMoveStack(t *testing.T) {
+	b := mustBoard(t, "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4")
+	s := testSearcher(b)
+	below := []chess.Move{chess.CreateMove(1, 2, chess.Normal), chess.CreateMove(3, 4, chess.Normal)}
+	s.moveStack = slices.Clone(below)
+
+	s.alphaBeta(-infinite, infinite, 3)
+	if !slices.Equal(s.moveStack, below) {
+		t.Errorf("after alphaBeta the move stack is %v, want %v", s.moveStack, below)
+	}
+	s.quiesce(-infinite, infinite)
+	if !slices.Equal(s.moveStack, below) {
+		t.Errorf("after quiesce the move stack is %v, want %v", s.moveStack, below)
+	}
 }

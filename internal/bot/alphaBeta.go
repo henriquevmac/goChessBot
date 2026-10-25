@@ -59,7 +59,10 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	}
 	bestValue := -infinite
 	bestMove := chess.Move(0)
-	legalMoves := s.board.GenerateLegalMoves(nil)
+	start := len(s.moveStack)
+	s.moveStack = s.board.GenerateLegalMoves(s.moveStack)
+	legalMoves := s.moveStack[start:]
+	defer func() { s.moveStack = s.moveStack[:start] }()
 	if len(legalMoves) == 0 {
 		if s.board.InCheck() {
 			return matedScore(s.ply)
@@ -125,13 +128,14 @@ func (aB *alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		deadline = time.Now().Add(limits.Time)
 	}
 	s := searcher{
-		board:    &b,
-		deadline: deadline,
-		nodes:    0,
-		stopped:  false,
-		history:  slices.Clone(limits.History),
-		ply:      1,
-		options:  aB.options,
+		board:     &b,
+		deadline:  deadline,
+		nodes:     0,
+		stopped:   false,
+		history:   slices.Clone(limits.History),
+		ply:       1,
+		options:   aB.options,
+		moveStack: make([]chess.Move, 0, 4096),
 	}
 	if !aB.options.NoTT {
 		if aB.tt == nil || aB.options.FreshTT {
