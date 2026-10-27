@@ -80,13 +80,21 @@ func TestNoKillersAndNoHistoryRecordNothing(t *testing.T) {
 	}
 }
 
-// Without repetition detection, a queen-up bot no longer sees b8b7 as a draw:
-// all moves score the same, so it plays the first one generated, the repetition.
-// This checks that the switch really turns the detection off.
+// A node whose position already occurred two plies earlier scores as a draw,
+// unless NoRepetition turns the detection off. The side to move is a queen up,
+// so without the detection the score is far from zero.
 func TestNoRepetitionIgnoresHistory(t *testing.T) {
-	b, history := playFrom(t, winningShuffleFEN, winningShuffle...)
-	m := NewAlphaBeta(AlphaBetaOptions{NoRepetition: true}).BestMove(*b, Limits{Depth: 1, History: history})
-	if !makesThreefold(b, history, m) {
-		t.Errorf("with NoRepetition, played %s; want the first generated move b8b7, which repeats", m)
+	b := mustBoard(t, "6k1/8/8/8/8/8/8/Q5K1 w - - 10 30")
+	for _, noRepetition := range []bool{false, true} {
+		s := testSearcher(b)
+		s.options.NoRepetition = noRepetition
+		s.history = []uint64{b.Hash, 0}
+		score := s.alphaBeta(-infinite, infinite, 1)
+		if !noRepetition && score != 0 {
+			t.Errorf("with repetition detection, a repeated position scored %d, want 0", score)
+		}
+		if noRepetition && score <= 0 {
+			t.Errorf("with NoRepetition, a queen-up position scored %d, want it above 0", score)
+		}
 	}
 }

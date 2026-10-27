@@ -40,8 +40,9 @@ func TestQuiesceDoesNotStandPatInCheck(t *testing.T) {
 	// take the knight, so the king steps away and the queen is lost.
 	b := mustBoard(t, "7k/8/8/8/8/5n2/3Q4/R5K1 w - - 0 1")
 	s := testSearcher(b)
-	want := chess.PieceValues[chess.Rook] - chess.PieceValues[chess.Knight]
-	if got := s.quiesce(-infinite, infinite); got != want {
-		t.Errorf("quiesce = %d, want %d (rook against knight after losing the queen); static eval is %d", got, want, b.Evaluate())
+	standPat := b.Evaluate()
+	// Losing the queen costs far more than any piece-square bonus can make up.
+	if got := s.quiesce(-infinite, infinite); got > standPat-chess.PieceValues[chess.Queen]/2 {
+		t.Errorf("quiesce = %d, static eval %d: the queen should be lost", got, standPat)
 	}
 }

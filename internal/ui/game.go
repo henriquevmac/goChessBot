@@ -55,7 +55,7 @@ func NewGame(images map[chess.PieceId]*ebiten.Image, board *chess.Board) *Game {
 		History:            []uint64{},
 		Bot:                bot.New(bot.AlphaBeta),
 		BotColor:           chess.Black,
-		BotLimits:          bot.Limits{Depth: 0, Time: time.Second * 2},
+		BotLimits:          bot.Limits{Depth: 8, Time: time.Second * 2},
 		thinking:           false,
 		botMoves:           make(chan chess.Move, 1),
 	}

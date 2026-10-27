@@ -140,6 +140,50 @@ func TestEvaluateSideToMove(t *testing.T) {
 	}
 }
 
+// The king hides in the middlegame and comes to the centre in the endgame. The
+// same two king squares must swap order once the pieces are off the board.
+func TestEvaluateKingDependsOnPhase(t *testing.T) {
+	tests := []struct {
+		name          string
+		better, worse string // the same position with the white king on two squares
+	}{
+		{
+			"all pieces on: castled beats centre",
+			"rnbq1rk1/pppppppp/8/8/8/8/PPPPPPPP/RNBQ1RK1 w - - 0 1",
+			"rnbq1rk1/pppppppp/8/8/4K3/8/PPPPPPPP/RNBQ1R2 w - - 0 1",
+		},
+		{
+			"only pawns left: centre beats castled",
+			"6k1/pppp4/8/8/4K3/8/PPPP4/8 w - - 0 1",
+			"6k1/pppp4/8/8/8/8/PPPP4/6K1 w - - 0 1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			better, worse := mustBoard(t, tt.better).Evaluate(), mustBoard(t, tt.worse).Evaluate()
+			if better <= worse {
+				t.Errorf("%s scores %d, not above %s at %d", tt.better, better, tt.worse, worse)
+			}
+		})
+	}
+}
+
+// Promotions can push the phase past its maximum. The king must then be scored
+// with the middlegame table alone, not extrapolated beyond it.
+func TestEvaluateKingPhaseIsCapped(t *testing.T) {
+	const (
+		g1 = 6
+		e4 = 28
+	)
+	castled := mustBoard(t, "rnbq1rk1/pppppppp/8/8/8/QQQQQQQQ/PPPPPPPP/QQQQ1RK1 w - - 0 1")
+	centre := mustBoard(t, "rnbq1rk1/pppppppp/8/8/4K3/QQQQQQQQ/PPPPPPPP/QQQQ1R2 w - - 0 1")
+	got := castled.Evaluate() - centre.Evaluate()
+	want := kingMidSquareTable[g1^56] - kingMidSquareTable[e4^56]
+	if got != want {
+		t.Errorf("moving the king from e4 to g1 with twelve queens on the board gains %d, want %d (middlegame table only)", got, want)
+	}
+}
+
 func TestEvaluateDoesNotChangeBoard(t *testing.T) {
 	for _, fen := range evalPositions(t) {
 		b := mustBoard(t, fen)
