@@ -5,13 +5,6 @@ import (
 	"testing"
 )
 
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
-}
-
 // sameSquares reports whether a and b contain the same squares, in any order.
 func sameSquares(a, b []int) bool {
 	a, b = slices.Clone(a), slices.Clone(b)

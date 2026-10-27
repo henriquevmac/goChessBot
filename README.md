@@ -87,6 +87,26 @@ python3 -m venv .venv
 
 It picks one position per game between half-moves 8 and 20 (`--min-ply`, `--max-ply`), skips variants and games that are over, and keeps an evenly spread random sample. Run it with `-h` for all options.
 
+### Endgame conversion
+
+`cmd/endgames` checks whether the bot can win won endgames: it plays alpha-beta against itself from random positions where one side has extra pieces against a bare king, and counts how often the winning side mates before the fifty-move rule, a repetition or the move limit ends the game.
+
+```sh
+go run ./cmd/endgames                                  # KQK and KRK, 50 positions each
+go run ./cmd/endgames -endgames KQK,KRK,KBNK -v        # also print the positions that were not won
+```
+
+| Flag | Meaning |
+|---|---|
+| `-endgames` | comma-separated endgames, written as the winning pieces against a bare king: `KQK`, `KRK`, `KBNK`, ... (default `KQK,KRK`) |
+| `-positions` | random positions per endgame (default 50); half have White winning, half Black |
+| `-seed` | seed for the positions (default 1); the same seed gives the same positions, so two versions of the bot can be compared on identical games |
+| `-movetime`, `-depth` | search limits, as in the arena (default 100ms, no depth limit) |
+| `-maxplies` | stop a game after this many half-moves (default 200) |
+| `-v` | print the starting position of every game that was not won |
+
+To compare versions, build the tool once per version and run both with the same seed. It reports, for every endgame, the share of games mated, the average number of half-moves to mate, and how the other games ended.
+
 ### Adding a bot
 
 1. Add a `BotType` constant and return the new bot from `bot.New` in `internal/bot/bot.go`.
@@ -141,6 +161,7 @@ The `benchmarks/` folder is in `.gitignore`, so results stay local.
 ├── main.go                 Entry point: loads assets, creates the board, starts the game
 ├── assets/chessPieces/     Piece sprites (w/b + K, Q, R, B, Kn, P)
 ├── cmd/arena/              Command-line bot-vs-bot matches
+├── cmd/endgames/           Checks whether the bot converts won endgames
 ├── scripts/pgn_to_fens.py  Samples opening positions (FENs) from a PGN file
 └── internal/
     ├── chess/              Chess rules, with no graphics dependencies; tests in *_test.go
@@ -153,6 +174,8 @@ The `benchmarks/` folder is in `.gitignore`, so results stay local.
     │   ├── makemove.go     Make / unmake move with an undo record
     │   ├── legal.go        Legal move filtering, perft, finding a move from two squares
     │   ├── gameend.go      Check, checkmate, stalemate and draw detection
+    │   ├── evaluation.go   Static evaluation: material, piece-square tables, mop-up
+    │   ├── pst.go          Piece-square tables
     │   └── zobrist.go      Zobrist hashing and threefold repetition
     ├── bot/                The Bot interface and the bots; contract tests for every bot
     ├── match/              Plays one game between two bots, without any UI

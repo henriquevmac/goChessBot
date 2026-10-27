@@ -184,6 +184,84 @@ func TestEvaluateKingPhaseIsCapped(t *testing.T) {
 	}
 }
 
+// kingTableScore is what the king tables alone give a king on sq, from its own
+// side's point of view.
+func kingTableScore(sq int, white bool, phase int) int {
+	if white {
+		sq ^= 56
+	}
+	return (kingMidSquareTable[sq]*phase + kingEndSquareTable[sq]*(maxPhase-phase)) / maxPhase
+}
+
+// Endgames where one side is winning, and where nobody is, must score the same
+// from either side, so the mop-up bonus goes to whoever is ahead, white or black.
+func TestEvaluateMopUpColorSymmetry(t *testing.T) {
+	for _, fen := range []string{
+		"k7/8/8/8/8/2K5/8/7R w - - 0 1",      // rook against bare king
+		"k7/8/8/8/8/2K5/8/7R b - - 0 1",      // the same, the loser to move
+		"7k/8/8/3QK3/8/8/8/8 w - - 0 1",      // queen against bare king
+		"4k3/pp6/8/8/8/8/PP6/4K3 w - - 0 1",  // equal pawn endgame: no bonus for anyone
+		"4k3/ppp5/8/8/8/8/PP6/4K3 w - - 0 1", // one pawn up: not winning enough
+	} {
+		mirrored := mirrorFEN(t, fen)
+		if a, b := mustBoard(t, fen).Evaluate(), mustBoard(t, mirrored).Evaluate(); a != b {
+			t.Errorf("Evaluate differs between a position and its mirror image:\n  %s  → %d\n  %s  → %d", fen, a, mirrored, b)
+		}
+	}
+}
+
+// With a rook against a bare king, the winner wants the losing king in a corner,
+// and that must count for more than the king tables alone say.
+func TestEvaluateMopUpPushesLosingKingToEdge(t *testing.T) {
+	const (
+		a8 = 56
+		e5 = 36
+	)
+	phase := phaseValues[Rook]
+	corner := mustBoard(t, "k7/8/8/8/8/2K5/8/7R w - - 0 1")
+	centre := mustBoard(t, "8/8/8/4k3/8/2K5/8/7R w - - 0 1")
+	got := corner.Evaluate() - centre.Evaluate()
+	tables := kingTableScore(e5, false, phase) - kingTableScore(a8, false, phase)
+	if got <= tables {
+		t.Errorf("the losing king in the corner instead of the centre gains white %d, want more than the king tables' %d", got, tables)
+	}
+}
+
+// With a rook against a bare king, the winning king walking up to the losing
+// king must count for more than the king tables alone say.
+func TestEvaluateMopUpBringsKingsTogether(t *testing.T) {
+	const (
+		c6 = 42
+		h1 = 7
+	)
+	phase := phaseValues[Rook]
+	near := mustBoard(t, "k7/8/2K5/8/8/8/8/1R6 w - - 0 1")
+	far := mustBoard(t, "k7/8/8/8/8/8/8/1R5K w - - 0 1")
+	got := near.Evaluate() - far.Evaluate()
+	tables := kingTableScore(c6, true, phase) - kingTableScore(h1, true, phase)
+	if got <= tables {
+		t.Errorf("the winning king next to the losing one instead of far away gains white %d, want more than the king tables' %d", got, tables)
+	}
+}
+
+// A one-pawn lead is not winning enough for the mop-up bonus: in a pawn ending,
+// where the bonus would count in full, moving the kings together changes only
+// what the king tables say.
+func TestEvaluateNoMopUpForSmallLead(t *testing.T) {
+	const (
+		e1 = 4
+		e2 = 12
+	)
+	// Black is a pawn up.
+	a := mustBoard(t, "4k3/ppp5/8/8/8/8/PP2K3/8 w - - 0 1")
+	b := mustBoard(t, "4k3/ppp5/8/8/8/8/PP6/4K3 w - - 0 1")
+	got := a.Evaluate() - b.Evaluate()
+	want := kingTableScore(e2, true, 0) - kingTableScore(e1, true, 0)
+	if got != want {
+		t.Errorf("Ke2 instead of Ke1 changes the score by %d, want %d from the king table alone", got, want)
+	}
+}
+
 func TestEvaluateDoesNotChangeBoard(t *testing.T) {
 	for _, fen := range evalPositions(t) {
 		b := mustBoard(t, fen)
