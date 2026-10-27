@@ -55,24 +55,36 @@ func (s *searcher) quiesce(alpha, beta int) int {
 	if s.check() {
 		return 0
 	}
-	staticEval := s.board.Evaluate()
 
-	bestValue := staticEval
-	if bestValue >= beta {
-		return bestValue
-	}
-	if bestValue > alpha {
-		alpha = bestValue
-	}
-
+	bestValue := -infinite
+	var moves []chess.Move
 	start := len(s.moveStack)
-	s.moveStack = s.board.GenerateCaptureMoves(s.moveStack)
-	captures := s.moveStack[start:]
+	if !s.board.InCheck() {
+		bestValue = s.board.Evaluate()
+
+		if bestValue >= beta {
+			return bestValue
+		}
+		if bestValue > alpha {
+			alpha = bestValue
+		}
+		s.moveStack = s.board.GenerateCaptureMoves(s.moveStack)
+		moves = s.moveStack[start:]
+	} else {
+		s.moveStack = s.board.GenerateLegalMoves(s.moveStack)
+		moves = s.moveStack[start:]
+		if len(moves) == 0 {
+			return matedScore(s.ply)
+		}
+	}
 	defer func() { s.moveStack = s.moveStack[:start] }()
-	s.orderMoves(captures, chess.Move(0))
-	for _, move := range captures {
+	s.orderMoves(moves, chess.Move(0))
+
+	for _, move := range moves {
 		u := s.board.MakeMove(move)
+		s.ply++
 		score := -s.quiesce(-beta, -alpha)
+		s.ply--
 		s.board.UnmakeMove(move, u)
 
 		if score >= beta {
