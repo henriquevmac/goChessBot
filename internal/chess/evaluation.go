@@ -20,6 +20,24 @@ var phaseValues = [7]int{
 	Queen:  4,
 }
 
+var midPassedPawnVal = [7]int{
+	1: 5,
+	2: 10,
+	3: 15,
+	4: 25,
+	5: 40,
+	6: 60,
+}
+
+var endPassedPawnVal = [7]int{
+	1: 20,
+	2: 25,
+	3: 45,
+	4: 75,
+	5: 120,
+	6: 180,
+}
+
 func abs(x int) int {
 	if x < 0 {
 		return -x
@@ -51,15 +69,55 @@ func (b *Board) kingDistance() int {
 	return abs(rowB-rowW) + abs(colB-colW)
 }
 
+func (b *Board) mopUp(phase, matCount int) int {
+	if matCount >= 200 {
+		return (47*b.centreDistance(Black) + 16*(14-b.kingDistance())) * (maxPhase - phase) / (10 * maxPhase)
+	} else if matCount <= -200 {
+		return -((47*b.centreDistance(White) + 16*(14-b.kingDistance())) * (maxPhase - phase) / (10 * maxPhase))
+	}
+	return 0
+}
+
+func passedPawn(row, col int, blackPawns, whitePawns [8]int, color PieceId) bool {
+	lookups := []int{-1, 0, 1}
+	if col == 0 {
+		lookups = []int{0, 1}
+	} else if col == 7 {
+		lookups = []int{-1, 0}
+	}
+	for _, offset := range lookups {
+		if color == White {
+			if blackPawns[col+offset] > row {
+				return false
+			}
+		} else {
+			if whitePawns[col+offset] < row {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (b *Board) Evaluate() int {
+	blackPawns := [8]int{-1, -1, -1, -1, -1, -1, -1, -1}
+	whitePawns := [8]int{10, 10, 10, 10, 10, 10, 10, 10}
 	matCount, phase := b.materialAndPhaseCounts()
 	count := matCount
-	if matCount >= 200 {
-		count += (47*b.centreDistance(Black) + 16*(14-b.kingDistance())) * (maxPhase - phase) / (10 * maxPhase)
-	} else if matCount <= -200 {
-		count -= (47*b.centreDistance(White) + 16*(14-b.kingDistance())) * (maxPhase - phase) / (10 * maxPhase)
-	}
+	count += b.mopUp(phase, matCount)
 	for idx, piece := range b.Square {
+		if piece.Type() == Pawn {
+			row, col := ConvertIndexToRowCol(idx)
+			if piece.Color() == White {
+				if row < whitePawns[col] {
+					whitePawns[col] = row
+				}
+			} else {
+				if row > blackPawns[col] {
+					blackPawns[col] = row
+				}
+			}
+		}
 		if piece.Color() == White {
 			if piece.Type() == King {
 				count += (kingMidSquareTable[idx^56]*phase + kingEndSquareTable[idx^56]*(maxPhase-phase)) / maxPhase
@@ -71,6 +129,19 @@ func (b *Board) Evaluate() int {
 				count -= (kingMidSquareTable[idx]*phase + kingEndSquareTable[idx]*(maxPhase-phase)) / maxPhase
 			} else {
 				count -= pieceSquareTables[piece.Type()][idx]
+			}
+		}
+	}
+	for idx, piece := range b.Square {
+		if piece.Type() != Pawn {
+			continue
+		}
+		row, col := ConvertIndexToRowCol(idx)
+		if passedPawn(row, col, blackPawns, whitePawns, piece.Color()) {
+			if piece.Color() == White {
+				count += (midPassedPawnVal[row]*phase + endPassedPawnVal[row]*(maxPhase-phase)) / maxPhase
+			} else {
+				count -= (midPassedPawnVal[7-row]*phase + endPassedPawnVal[7-row]*(maxPhase-phase)) / maxPhase
 			}
 		}
 	}
