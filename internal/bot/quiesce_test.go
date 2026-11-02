@@ -46,3 +46,26 @@ func TestQuiesceDoesNotStandPatInCheck(t *testing.T) {
 		t.Errorf("quiesce = %d, static eval %d: the queen should be lost", got, standPat)
 	}
 }
+
+// A side that is stalemated when quiescence reaches it scores a draw, not its
+// material.
+func TestQuiesceSeesStalemate(t *testing.T) {
+	// The queen on c7 takes every square from the king on a8 without checking it.
+	b := mustBoard(t, "k7/2Q5/8/8/8/8/8/7K b - - 0 1")
+	s := testSearcher(b)
+	if got := s.quiesce(-infinite, infinite); got != 0 {
+		t.Errorf("quiesce = %d, want 0 (stalemate)", got)
+	}
+}
+
+// A capture that stalemates is worth a draw, so a side that is ahead keeps its
+// standing pat score instead.
+func TestQuiesceCaptureThatStalematesIsADraw(t *testing.T) {
+	// Qxc7, the only capture, leaves the king on a8 without a move.
+	b := mustBoard(t, "k7/2n5/8/8/8/8/8/2Q4K w - - 0 1")
+	s := testSearcher(b)
+	standPat := b.Evaluate()
+	if got := s.quiesce(-infinite, infinite); got != standPat {
+		t.Errorf("quiesce = %d, want the standing pat score %d (Qxc7 stalemates)", got, standPat)
+	}
+}

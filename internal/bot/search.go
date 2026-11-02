@@ -26,6 +26,10 @@ func matedScore(ply int) int {
 	return -mateValue + ply
 }
 
+func valuePieces(b *chess.Board) uint8 {
+	return b.Counts[chess.Knight|b.ToMove] + b.Counts[chess.Bishop|b.ToMove] + b.Counts[chess.Rook|b.ToMove] + b.Counts[chess.Queen|b.ToMove]
+}
+
 func startNextDepth(elapsed, limit time.Duration) bool {
 	if limit == 0 {
 		return true
@@ -60,6 +64,15 @@ func (s *searcher) quiesce(alpha, beta int) int {
 	var moves []chess.Move
 	start := len(s.moveStack)
 	if !s.board.InCheck() {
+		if valuePieces(s.board) == 0 {
+			s.moveStack = s.board.GenerateLegalMoves(s.moveStack)
+			moves = s.moveStack[start:]
+			if len(moves) == 0 {
+				return 0
+			}
+			s.moveStack = s.moveStack[:start]
+		}
+
 		bestValue = s.board.Evaluate()
 
 		if bestValue >= beta {
