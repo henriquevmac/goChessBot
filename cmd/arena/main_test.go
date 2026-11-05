@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewBotNames(t *testing.T) {
-	for _, name := range []string{"random", "alphaBeta", "alphaBeta-noTT", "alphaBeta-noKillers-noHistory", "alphaBeta-noTT-noKillers-noHistory-noRepetition", "alphaBeta-freshTT"} {
+	for _, name := range []string{"random", "alphaBeta", "alphaBeta-noTT", "alphaBeta-noKillers-noHistory", "alphaBeta-noTT-noKillers-noHistory-noRepetition", "alphaBeta-freshTT", "alphaBeta-noNullMove"} {
 		if _, err := newBot(name); err != nil {
 			t.Errorf("newBot(%q): %v", name, err)
 		}

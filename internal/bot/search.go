@@ -20,6 +20,7 @@ type searcher struct {
 	historyScores [64][64]int
 	options       AlphaBetaOptions
 	moveStack     []chess.Move
+	nullMove      bool
 }
 
 func matedScore(ply int) int {

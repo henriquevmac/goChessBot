@@ -144,3 +144,30 @@ func (b *Board) UnmakeMove(m Move, u Undo) {
 	b.Square[m.From()] = piece
 	b.Square[m.To()] = capturedPiece
 }
+
+func (b *Board) MakeNullMove() Undo {
+	undoRecord := Undo{
+		captured:        Empty,
+		castlingRights:  b.CastlingRights,
+		enPassantSquare: b.EnPassantSquare,
+		halfmoveClock:   b.HalfmoveClock,
+		hash:            b.Hash,
+	}
+	b.ToMove = b.ToMove.OppositeColor()
+	b.Hash ^= zobristBlack
+	if b.EnPassantSquare != -1 {
+		b.Hash ^= zobristEP[b.EnPassantSquare%8]
+		b.EnPassantSquare = -1
+	}
+	b.HalfmoveClock = 0
+
+	return undoRecord
+}
+
+func (b *Board) UnmakeNullMove(u Undo) {
+	b.HalfmoveClock = u.halfmoveClock
+	b.EnPassantSquare = u.enPassantSquare
+	b.CastlingRights = u.castlingRights
+	b.Hash = u.hash
+	b.ToMove = b.ToMove.OppositeColor()
+}

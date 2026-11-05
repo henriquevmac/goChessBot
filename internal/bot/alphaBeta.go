@@ -57,6 +57,21 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 		}
 		ttBestMove = entry.bestMove
 	}
+	if !s.options.NoNullMove && !s.board.InCheck() && valuePieces(s.board) > 0 && depth >= 3 && !s.nullMove {
+		R := 2
+		s.history = append(s.history, s.board.Hash)
+		u := s.board.MakeNullMove()
+		s.ply++
+		s.nullMove = true
+		score := -s.alphaBeta(-beta, -beta+1, depth-1-R)
+		s.nullMove = false
+		s.ply--
+		s.history = s.history[:len(s.history)-1]
+		s.board.UnmakeNullMove(u)
+		if score >= beta {
+			return beta
+		}
+	}
 	bestValue := -infinite
 	bestMove := chess.Move(0)
 	start := len(s.moveStack)
@@ -75,7 +90,10 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 		s.history = append(s.history, s.board.Hash)
 		u := s.board.MakeMove(move)
 		s.ply++
+		nullMove := s.nullMove
+		s.nullMove = false
 		score := -s.alphaBeta(-beta, -alpha, depth-1)
+		s.nullMove = nullMove
 		s.ply--
 		s.history = s.history[:len(s.history)-1]
 		s.board.UnmakeMove(move, u)
@@ -136,6 +154,7 @@ func (aB *alphaBetaBot) BestMove(b chess.Board, limits Limits) chess.Move {
 		ply:       1,
 		options:   aB.options,
 		moveStack: make([]chess.Move, 0, 4096),
+		nullMove:  false,
 	}
 	if !aB.options.NoTT {
 		if aB.tt == nil || aB.options.FreshTT {

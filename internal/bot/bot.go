@@ -31,6 +31,7 @@ type AlphaBetaOptions struct {
 	NoHistory    bool
 	NoRepetition bool
 	FreshTT      bool
+	NoNullMove   bool
 }
 
 func NewAlphaBeta(options AlphaBetaOptions) Bot {

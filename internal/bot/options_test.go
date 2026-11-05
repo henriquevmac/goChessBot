@@ -15,7 +15,8 @@ var alphaBetaVariants = []AlphaBetaOptions{
 	{NoHistory: true},
 	{NoRepetition: true},
 	{FreshTT: true},
-	{NoTT: true, NoKillers: true, NoHistory: true, NoRepetition: true},
+	{NoNullMove: true},
+	{NoTT: true, NoKillers: true, NoHistory: true, NoRepetition: true, NoNullMove: true},
 }
 
 func forEachVariant(t *testing.T, test func(t *testing.T, bot Bot)) {
