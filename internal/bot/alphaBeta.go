@@ -18,22 +18,20 @@ type alphaBetaBot struct {
 	tt      *transpositionTable
 }
 
-func (s *searcher) alphaBeta(alpha, beta, depth int) int {
-	if s.check() {
-		return 0
+func (s *searcher) isRepetition() bool {
+	if s.options.NoRepetition {
+		return false
 	}
-	if !s.options.NoRepetition {
-		stop := max(len(s.history)-s.board.HalfmoveClock, 0)
-		for i := len(s.history) - 2; i >= stop; i -= 2 {
-			if s.history[i] == s.board.Hash {
-				return 0
-			}
+	stop := max(len(s.history)-s.board.HalfmoveClock, 0)
+	for i := len(s.history) - 2; i >= stop; i -= 2 {
+		if s.history[i] == s.board.Hash {
+			return true
 		}
 	}
-	if depth == 0 {
-		return s.quiesce(alpha, beta)
-	}
-	alphaOrig := alpha
+	return false
+}
+
+func (s *searcher) probeTT(alpha, beta, depth int) (int, bool, chess.Move) {
 	ttBestMove := chess.Move(0)
 	entry, found := ttEntry{}, false
 	if !s.options.NoTT {
@@ -44,47 +42,94 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 		if int(entry.depth) >= depth {
 			switch entry.flag {
 			case ttExact:
-				return score
+				return score, true, entry.bestMove
 			case ttLower:
 				if score >= beta {
-					return score
+					return score, true, entry.bestMove
 				}
 			case ttUpper:
 				if score <= alpha {
-					return score
+					return score, true, entry.bestMove
 				}
 			}
 		}
 		ttBestMove = entry.bestMove
 	}
-	if !s.options.NoNullMove && !s.board.InCheck() && valuePieces(s.board) > 0 && depth >= 3 && !s.nullMove {
-		R := 2
-		s.history = append(s.history, s.board.Hash)
-		u := s.board.MakeNullMove()
-		s.ply++
-		s.nullMove = true
-		score := -s.alphaBeta(-beta, -beta+1, depth-1-R)
-		s.nullMove = false
-		s.ply--
-		s.history = s.history[:len(s.history)-1]
-		s.board.UnmakeNullMove(u)
-		if score >= beta {
-			return beta
-		}
+	return 0, false, ttBestMove
+}
+
+func (s *searcher) nullMoveCutoff(beta, depth int) bool {
+	if s.options.NoNullMove || s.board.InCheck() || valuePieces(s.board) == 0 || depth < 3 || s.nullMove {
+		return false
 	}
+	R := 2
+	s.history = append(s.history, s.board.Hash)
+	u := s.board.MakeNullMove()
+	s.ply++
+	s.nullMove = true
+	score := -s.alphaBeta(-beta, -beta+1, depth-1-R)
+	s.nullMove = false
+	s.ply--
+	s.history = s.history[:len(s.history)-1]
+	s.board.UnmakeNullMove(u)
+	return score >= beta
+}
+
+func (s *searcher) noMoveScore() int {
+	if s.board.InCheck() {
+		return matedScore(s.ply)
+	}
+	return 0
+}
+
+func (s *searcher) storeTT(bestValue, alphaOrig, beta, depth int, bestMove chess.Move) {
+	if s.stopped || s.options.NoTT {
+		return
+	}
+	flag := ttExact
+	if bestValue <= alphaOrig {
+		flag = ttUpper
+	} else if bestValue >= beta {
+		flag = ttLower
+	}
+	score := scoreToTT(bestValue, s.ply)
+	s.tt.store(ttEntry{key: s.board.Hash, bestMove: bestMove, depth: int8(depth), score: int32(score), flag: flag})
+}
+
+func (s *searcher) alphaBeta(alpha, beta, depth int) int {
+	if s.check() {
+		return 0
+	}
+
+	if s.isRepetition() {
+		return 0
+	}
+
+	if depth == 0 {
+		return s.quiesce(alpha, beta)
+	}
+
+	alphaOrig := alpha
+	score, cutoff, ttBestMove := s.probeTT(alpha, beta, depth)
+	if cutoff {
+		return score
+	}
+
+	if s.nullMoveCutoff(beta, depth) {
+		return beta
+	}
+
 	bestValue := -infinite
 	bestMove := chess.Move(0)
 	start := len(s.moveStack)
 	s.moveStack = s.board.GenerateLegalMoves(s.moveStack)
 	legalMoves := s.moveStack[start:]
 	defer func() { s.moveStack = s.moveStack[:start] }()
+
 	if len(legalMoves) == 0 {
-		if s.board.InCheck() {
-			return matedScore(s.ply)
-		} else {
-			return 0
-		}
+		return s.noMoveScore()
 	}
+
 	s.orderMoves(legalMoves, ttBestMove)
 	for _, move := range legalMoves {
 		s.history = append(s.history, s.board.Hash)
@@ -109,16 +154,8 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 			break
 		}
 	}
-	if !s.stopped && !s.options.NoTT {
-		flag := ttExact
-		if bestValue <= alphaOrig {
-			flag = ttUpper
-		} else if bestValue >= beta {
-			flag = ttLower
-		}
-		score := scoreToTT(bestValue, s.ply)
-		s.tt.store(ttEntry{key: s.board.Hash, bestMove: bestMove, depth: int8(depth), score: int32(score), flag: flag})
-	}
+
+	s.storeTT(bestValue, alphaOrig, beta, depth, bestMove)
 	return bestValue
 }
 
