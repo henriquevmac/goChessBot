@@ -107,6 +107,25 @@ go run ./cmd/endgames -endgames KQK,KRK,KBNK -v        # also print the position
 
 To compare versions, build the tool once per version and run both with the same seed. It reports, for every endgame, the share of games mated, the average number of half-moves to mate, and how the other games ended.
 
+### UCI engine
+
+`cmd/uci` runs the alpha-beta bot as a [UCI](https://www.chessprogramming.org/UCI) engine, the text protocol chess GUIs and [lichess-bot](https://github.com/lichess-bot-devs/lichess-bot) use to talk to engines:
+
+```sh
+go build -o goChessBot-uci ./cmd/uci
+```
+
+Point a GUI such as Cute Chess at the binary, or set it as the engine in lichess-bot's `config.yml` (`protocol: "uci"`). It understands `uci`, `isready`, `ucinewgame`, `position startpos|fen ... [moves ...]`, `go` and `quit`:
+
+| `go` with | time per move |
+|---|---|
+| `movetime` | that time, less the move overhead |
+| `wtime`/`btime` (+ `winc`/`binc`, `movestogo`) | the side to move's remaining time / moves to go (20 if not given) + the increment, at most half the remaining time, less the move overhead |
+| only `depth` | no time limit, search to that depth |
+| nothing, or `infinite` | 5 seconds |
+
+The move overhead, time kept back for sending the move over the network, is 50 ms and can be changed with the one UCI option, `Move Overhead` (milliseconds; lichess-bot sets it from `uci_options`). The search runs in the same goroutine that reads commands, so `stop` cannot end a search early. Every `ucinewgame` starts a new bot with an empty transposition table.
+
 ### Adding a bot
 
 1. Add a `BotType` constant and return the new bot from `bot.New` in `internal/bot/bot.go`.
@@ -162,6 +181,7 @@ The `benchmarks/` folder is in `.gitignore`, so results stay local.
 ├── assets/chessPieces/     Piece sprites (w/b + K, Q, R, B, Kn, P)
 ├── cmd/arena/              Command-line bot-vs-bot matches
 ├── cmd/endgames/           Checks whether the bot converts won endgames
+├── cmd/uci/                The bot as a UCI engine, for chess GUIs and lichess-bot
 ├── scripts/pgn_to_fens.py  Samples opening positions (FENs) from a PGN file
 └── internal/
     ├── chess/              Chess rules, with no graphics dependencies; tests in *_test.go

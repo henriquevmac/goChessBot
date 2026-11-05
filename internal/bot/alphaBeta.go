@@ -131,6 +131,7 @@ func (s *searcher) alphaBeta(alpha, beta, depth int) int {
 	}
 
 	s.orderMoves(legalMoves, ttBestMove)
+
 	for _, move := range legalMoves {
 		s.history = append(s.history, s.board.Hash)
 		u := s.board.MakeMove(move)
